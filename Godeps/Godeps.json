@@ -1,0 +1,100 @@
+{
+	"ImportPath": "github.com/thepatrick/lunch",
+	"GoVersion": "go1.7",
+	"GodepVersion": "v75",
+	"Packages": [
+		"./..."
+	],
+	"Deps": [
+		{
+			"ImportPath": "github.com/goji/param",
+			"Rev": "d7f49fd7d1ed53fd562e737a8b5bbcc7e3d925e2"
+		},
+		{
+			"ImportPath": "github.com/google/go-querystring/query",
+			"Rev": "9235644dd9e52eeae6fa48efd539fdc351a0af53"
+		},
+		{
+			"ImportPath": "github.com/gorilla/context",
+			"Comment": "v1.1-7-g08b5f42",
+			"Rev": "08b5f424b9271eedf6f9f0ce86cb9396ed337a42"
+		},
+		{
+			"ImportPath": "github.com/gorilla/securecookie",
+			"Comment": "v1.1-5-gfa5329f",
+			"Rev": "fa5329f913702981df43dcb2a380bac429c810b5"
+		},
+		{
+			"ImportPath": "github.com/gorilla/sessions",
+			"Comment": "v1.1-2-g83c8db3",
+			"Rev": "83c8db3bdc9be789e57e3756ffbcffd2d7d40176"
+		},
+		{
+			"ImportPath": "github.com/moul/http2curl",
+			"Rev": "4e24498b31dba4683efb9d35c1c8a91e2eda28c8"
+		},
+		{
+			"ImportPath": "github.com/nlopes/slack",
+			"Comment": "v0.0.1-152-ge595e9d",
+			"Rev": "e595e9d8590a04ff76407e4e7d1791d25b095c66"
+		},
+		{
+			"ImportPath": "github.com/parnurzeal/gorequest",
+			"Comment": "v0.2.14-24-gbdd24ac",
+			"Rev": "bdd24ac7ec2b0b2126f4782dd031644cbea1d223"
+		},
+		{
+			"ImportPath": "goji.io",
+			"Comment": "v1.0-19-g0d89ff5",
+			"Rev": "0d89ff54b2c18c9c4ba530e32496aef902d3c6cd"
+		},
+		{
+			"ImportPath": "goji.io/internal",
+			"Comment": "v1.0-19-g0d89ff5",
+			"Rev": "0d89ff54b2c18c9c4ba530e32496aef902d3c6cd"
+		},
+		{
+			"ImportPath": "goji.io/pat",
+			"Comment": "v1.0-19-g0d89ff5",
+			"Rev": "0d89ff54b2c18c9c4ba530e32496aef902d3c6cd"
+		},
+		{
+			"ImportPath": "goji.io/pattern",
+			"Comment": "v1.0-19-g0d89ff5",
+			"Rev": "0d89ff54b2c18c9c4ba530e32496aef902d3c6cd"
+		},
+		{
+			"ImportPath": "golang.org/x/net/publicsuffix",
+			"Rev": "69d4b8aa71caaaa75c3dfc11211d1be495abec7c"
+		},
+		{
+			"ImportPath": "golang.org/x/net/websocket",
+			"Rev": "69d4b8aa71caaaa75c3dfc11211d1be495abec7c"
+		},
+		{
+			"ImportPath": "gopkg.in/mgo.v2",
+			"Comment": "r2016.08.01-5-g3f83fa5",
+			"Rev": "3f83fa5005286a7fe593b055f0d7771a7dce4655"
+		},
+		{
+			"ImportPath": "gopkg.in/mgo.v2/bson",
+			"Comment": "r2016.08.01-5-g3f83fa5",
+			"Rev": "3f83fa5005286a7fe593b055f0d7771a7dce4655"
+		},
+		{
+			"ImportPath": "gopkg.in/mgo.v2/internal/json",
+			"Comment": "r2016.08.01-5-g3f83fa5",
+			"Rev": "3f83fa5005286a7fe593b055f0d7771a7dce4655"
+		},
+		{
+			"ImportPath": "gopkg.in/mgo.v2/internal/sasl",
+			"Comment": "r2016.08.01-5-g3f83fa5",
+			"Rev": "3f83fa5005286a7fe593b055f0d7771a7dce4655"
+		},
+		{
+			"ImportPath": "gopkg.in/mgo.v2/internal/scram",
+			"Comment": "r2016.08.01-5-g3f83fa5",
+			"Rev": "3f83fa5005286a7fe593b055f0d7771a7dce4655"
+		}
+	]
+}
