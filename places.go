@@ -1,45 +1,22 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"math/rand"
-	"net/http"
 	"time"
 
 	mgo "gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
-
-	"goji.io"
-	"goji.io/pat"
-
-	"github.com/thepatrick/lunch/support"
 )
 
 // Place is a "Place" to have lunch
 type Place struct {
 	ID          bson.ObjectId `bson:"_id,omitempty"`
+	TeamID      string        `json:"team_id"`
 	Name        string        `json:"name"`
 	LastVisited time.Time     `json:"last_visited"`
 	LastSkipped time.Time     `json:"last_skipped"`
-}
-
-func newPlacesMux(session *mgo.Session) *goji.Mux {
-	mux := goji.SubMux()
-
-	ensurePlacesIndex(session)
-
-	mux.HandleFunc(pat.Get("/"), allPlacesHTTP(session))
-	mux.HandleFunc(pat.Get("/propose"), proposePlaceHTTP(session))
-	mux.HandleFunc(pat.Post("/"), addPlaceHTTP(session))
-	mux.HandleFunc(pat.Get("/:id"), placeByID(session))
-	mux.HandleFunc(pat.Put("/:id"), updatePlace(session))
-	mux.HandleFunc(pat.Post("/:id/visit"), visitPlaceHTTP(session))
-	mux.HandleFunc(pat.Post("/:id/skip"), skipPlaceHTTP(session))
-	mux.HandleFunc(pat.Delete("/:id"), deletePlace(session))
-	mux.Use(support.Logging)
-	return mux
 }
 
 func ensurePlacesIndex(s *mgo.Session) {
@@ -48,28 +25,40 @@ func ensurePlacesIndex(s *mgo.Session) {
 
 	c := session.DB("lunch").C("places")
 
-	index := mgo.Index{
-		Key:        []string{"name"},
+	nameIndex := mgo.Index{
+		Key:        []string{"name", "teamid"},
 		Unique:     true,
 		DropDups:   true,
 		Background: true,
 		Sparse:     true,
 	}
 
-	err := c.EnsureIndex(index)
+	err := c.EnsureIndex(nameIndex)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	teamIndex := mgo.Index{
+		Key:        []string{"teamid"},
+		Unique:     false,
+		Background: true,
+		Sparse:     true,
+	}
+
+	err = c.EnsureIndex(teamIndex)
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
-func allPlaces(s *mgo.Session) ([]Place, error) {
+func allPlaces(s *mgo.Session, teamID string) ([]Place, error) {
 	session := s.Copy()
 	defer session.Close()
 
 	c := session.DB("lunch").C("places")
 
 	var places []Place
-	err := c.Find(bson.M{}).All(&places)
+	err := c.Find(bson.M{"teamid": teamID}).All(&places)
 	if err != nil {
 		log.Println("Failed to get all books: ", err)
 		return nil, fmt.Errorf("Database error")
@@ -98,14 +87,14 @@ func sortProposablePlaces(vs []Place) []Place {
 	return vs
 }
 
-func proposePlace(s *mgo.Session) (Place, error) {
+func proposePlace(s *mgo.Session, teamID string) (Place, error) {
 	session := s.Copy()
 	defer session.Close()
 
 	c := session.DB("lunch").C("places")
 
 	var places []Place
-	err := c.Find(bson.M{}).All(&places)
+	err := c.Find(bson.M{"teamid": teamID}).All(&places)
 	if err != nil {
 		log.Println("Failed to get all places: ", err)
 		return Place{}, fmt.Errorf("Database error")
@@ -114,10 +103,13 @@ func proposePlace(s *mgo.Session) (Place, error) {
 	places = onlyProposablePlaces(places)
 
 	if len(places) == 0 {
+		log.Printf("We have nowhere to go :(")
 		return Place{}, fmt.Errorf("There are no places that haven't been skipped or visited recently")
 	}
 
 	places = sortProposablePlaces(places)
+
+	log.Printf("We have %v places!\n", len(places))
 
 	return places[0], nil
 }
@@ -127,6 +119,8 @@ func addPlace(place Place, s *mgo.Session) (string, error) {
 	defer session.Close()
 
 	c := session.DB("lunch").C("places")
+
+	log.Printf("Adding %v in %v", place.Name, place.TeamID)
 
 	err := c.Insert(place)
 	if err != nil {
@@ -141,43 +135,43 @@ func addPlace(place Place, s *mgo.Session) (string, error) {
 	return place.ID.Hex(), nil
 }
 
-func placeByID(s *mgo.Session) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		session := s.Copy()
-		defer session.Close()
+// func placeByID(s *mgo.Session) http.HandlerFunc {
+// 	return func(w http.ResponseWriter, r *http.Request) {
+// 		session := s.Copy()
+// 		defer session.Close()
 
-		id := pat.Param(r, "id")
-		c := session.DB("lunch").C("places")
+// 		id := pat.Param(r, "id")
+// 		c := session.DB("lunch").C("places")
 
-		var place Place
-		err := c.Find(bson.M{"_id": bson.ObjectIdHex(id)}).One(&place)
-		if err != nil {
-			support.ErrorWithJSON(w, "Database error", http.StatusInternalServerError)
-			log.Printf("Failed to find place %v error: %v\n", id, err)
-			return
-		}
+// 		var place Place
+// 		err := c.Find(bson.M{"_id": bson.ObjectIdHex(id)}).One(&place)
+// 		if err != nil {
+// 			support.ErrorWithJSON(w, "Database error", http.StatusInternalServerError)
+// 			log.Printf("Failed to find place %v error: %v\n", id, err)
+// 			return
+// 		}
 
-		if place.ID == "" {
-			support.ErrorWithJSON(w, "Place not found", http.StatusNotFound)
-		}
+// 		if place.ID == "" {
+// 			support.ErrorWithJSON(w, "Place not found", http.StatusNotFound)
+// 		}
 
-		respBody, err := json.MarshalIndent(place, "", "  ")
-		if err != nil {
-			log.Fatal(err)
-		}
+// 		respBody, err := json.MarshalIndent(place, "", "  ")
+// 		if err != nil {
+// 			log.Fatal(err)
+// 		}
 
-		support.ResponseWithJSON(w, respBody, http.StatusOK)
-	}
-}
+// 		support.ResponseWithJSON(w, respBody, http.StatusOK)
+// 	}
+// }
 
-func visitPlace(id string, s *mgo.Session) error {
+func visitPlace(s *mgo.Session, teamID string, id string) error {
 	session := s.Copy()
 	defer session.Close()
 
 	c := session.DB("lunch").C("places")
 
 	var place Place
-	err := c.Find(bson.M{"_id": bson.ObjectIdHex(id)}).One(&place)
+	err := c.Find(bson.M{"teamid": teamID, "_id": bson.ObjectIdHex(id)}).One(&place)
 	if err != nil {
 		log.Printf("Failed to find place %v error: %v\n", id, err)
 		return fmt.Errorf("Database error")
@@ -202,14 +196,14 @@ func visitPlace(id string, s *mgo.Session) error {
 	return nil
 }
 
-func skipPlace(id string, s *mgo.Session) error {
+func skipPlace(s *mgo.Session, teamID string, id string) error {
 	session := s.Copy()
 	defer session.Close()
 
 	c := session.DB("lunch").C("places")
 
 	var place Place
-	err := c.Find(bson.M{"_id": bson.ObjectIdHex(id)}).One(&place)
+	err := c.Find(bson.M{"teamid": teamID, "_id": bson.ObjectIdHex(id)}).One(&place)
 	if err != nil {
 		log.Printf("Failed to find place %v error: %v\n", id, err)
 		return fmt.Errorf("Database error")
@@ -234,165 +228,94 @@ func skipPlace(id string, s *mgo.Session) error {
 	return nil
 }
 
-func updatePlace(s *mgo.Session) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		session := s.Copy()
-		defer session.Close()
+// func updatePlace(s *mgo.Session) http.HandlerFunc {
+// 	return func(w http.ResponseWriter, r *http.Request) {
+// 		session := s.Copy()
+// 		defer session.Close()
 
-		id := pat.Param(r, "id")
+// 		id := pat.Param(r, "id")
 
-		var place Place
-		decoder := json.NewDecoder(r.Body)
-		err := decoder.Decode(&place)
-		if err != nil {
-			support.ErrorWithJSON(w, "Incorrect body", http.StatusBadRequest)
-			return
-		}
+// 		var place Place
+// 		decoder := json.NewDecoder(r.Body)
+// 		err := decoder.Decode(&place)
+// 		if err != nil {
+// 			support.ErrorWithJSON(w, "Incorrect body", http.StatusBadRequest)
+// 			return
+// 		}
 
-		if place.Name == "" {
-			support.ErrorWithJSON(w, "Incorrect body", http.StatusBadRequest)
-			return
-		}
+// 		if place.Name == "" {
+// 			support.ErrorWithJSON(w, "Incorrect body", http.StatusBadRequest)
+// 			return
+// 		}
 
-		c := session.DB("lunch").C("places")
+// 		c := session.DB("lunch").C("places")
 
-		err = c.Update(bson.M{"_id": bson.ObjectIdHex(id)}, &place)
-		if err != nil {
-			if mgo.IsDup(err) {
-				support.ErrorWithJSON(w, "A place with this name already exists", http.StatusBadRequest)
-				return
-			}
-			switch err {
-			case mgo.ErrNotFound:
-				support.ErrorWithJSON(w, "Place not found", http.StatusNotFound)
-				return
-			default:
-				support.ErrorWithJSON(w, "Database error", http.StatusInternalServerError)
-				log.Println("Failed to update place: ", err)
-				return
-			}
-		}
+// 		err = c.Update(bson.M{"_id": bson.ObjectIdHex(id)}, &place)
+// 		if err != nil {
+// 			if mgo.IsDup(err) {
+// 				support.ErrorWithJSON(w, "A place with this name already exists", http.StatusBadRequest)
+// 				return
+// 			}
+// 			switch err {
+// 			case mgo.ErrNotFound:
+// 				support.ErrorWithJSON(w, "Place not found", http.StatusNotFound)
+// 				return
+// 			default:
+// 				support.ErrorWithJSON(w, "Database error", http.StatusInternalServerError)
+// 				log.Println("Failed to update place: ", err)
+// 				return
+// 			}
+// 		}
 
-		w.WriteHeader(http.StatusNoContent)
-	}
-}
+// 		w.WriteHeader(http.StatusNoContent)
+// 	}
+// }
 
-func deletePlace(s *mgo.Session) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		session := s.Copy()
-		defer session.Close()
+// func deletePlace(s *mgo.Session) http.HandlerFunc {
+// 	return func(w http.ResponseWriter, r *http.Request) {
+// 		session := s.Copy()
+// 		defer session.Close()
 
-		id := pat.Param(r, "id")
+// 		id := pat.Param(r, "id")
 
-		c := session.DB("lunch").C("places")
+// 		c := session.DB("lunch").C("places")
 
-		query := bson.M{"_id": bson.ObjectIdHex(id)}
-		log.Println("Looking for ", query)
-		err := c.Remove(query)
-		if err != nil {
-			switch err {
-			case mgo.ErrNotFound:
-				support.ErrorWithJSON(w, "Place not found", http.StatusNotFound)
-				return
-			default:
-				support.ErrorWithJSON(w, "Database error", http.StatusInternalServerError)
-				log.Println("Failed to delete place: ", err)
-				return
-			}
-		}
+// 		query := bson.M{"_id": bson.ObjectIdHex(id)}
+// 		log.Println("Looking for ", query)
+// 		err := c.Remove(query)
+// 		if err != nil {
+// 			switch err {
+// 			case mgo.ErrNotFound:
+// 				support.ErrorWithJSON(w, "Place not found", http.StatusNotFound)
+// 				return
+// 			default:
+// 				support.ErrorWithJSON(w, "Database error", http.StatusInternalServerError)
+// 				log.Println("Failed to delete place: ", err)
+// 				return
+// 			}
+// 		}
 
-		w.WriteHeader(http.StatusNoContent)
-	}
-}
+// 		w.WriteHeader(http.StatusNoContent)
+// 	}
+// }
 
 // HTTP API functions
 
-func allPlacesHTTP(s *mgo.Session) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		places, err := allPlaces(s)
+// func allPlacesHTTP(s *mgo.Session) http.HandlerFunc {
+// 	return func(w http.ResponseWriter, r *http.Request) {
+// 		places, err := allPlaces(s)
 
-		if err != nil {
-			support.ErrorWithJSON(w, "Database error", http.StatusInternalServerError)
-			log.Println("Failed to get all books: ", err)
-			return
-		}
+// 		if err != nil {
+// 			support.ErrorWithJSON(w, "Database error", http.StatusInternalServerError)
+// 			log.Println("Failed to get all books: ", err)
+// 			return
+// 		}
 
-		respBody, err := json.MarshalIndent(places, "", "  ")
-		if err != nil {
-			log.Fatal(err)
-		}
+// 		respBody, err := json.MarshalIndent(places, "", "  ")
+// 		if err != nil {
+// 			log.Fatal(err)
+// 		}
 
-		support.ResponseWithJSON(w, respBody, http.StatusOK)
-	}
-}
-
-func proposePlaceHTTP(s *mgo.Session) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		place, err := proposePlace(s)
-
-		if err != nil {
-			support.ErrorWithJSON(w, "Database error", http.StatusInternalServerError)
-			return
-		}
-
-		respBody, err := json.MarshalIndent(place, "", "  ")
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		support.ResponseWithJSON(w, respBody, http.StatusOK)
-	}
-}
-
-func visitPlaceHTTP(s *mgo.Session) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-
-		id := pat.Param(r, "id")
-
-		err := visitPlace(id, s)
-		if err != nil {
-			support.ErrorWithJSON(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		w.WriteHeader(http.StatusNoContent)
-	}
-}
-
-func skipPlaceHTTP(s *mgo.Session) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		id := pat.Param(r, "id")
-
-		err := skipPlace(id, s)
-		if err != nil {
-			support.ErrorWithJSON(w, err.Error(), http.StatusInternalServerError)
-			log.Printf("Failed to find place %v error: %v\n", id, err)
-			return
-		}
-
-		w.WriteHeader(http.StatusNoContent)
-	}
-}
-
-func addPlaceHTTP(s *mgo.Session) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		var place Place
-		decoder := json.NewDecoder(r.Body)
-		err := decoder.Decode(&place)
-		if err != nil {
-			support.ErrorWithJSON(w, "Incorrect body", http.StatusBadRequest)
-			return
-		}
-
-		placeID, err := addPlace(place, s)
-
-		if err != nil {
-			support.ErrorWithJSON(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		w.Header().Set("Location", r.URL.Path+"/"+string(placeID))
-		w.WriteHeader(http.StatusCreated)
-	}
-}
+// 		support.ResponseWithJSON(w, respBody, http.StatusOK)
+// 	}
+// }

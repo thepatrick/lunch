@@ -18,13 +18,14 @@ func Parse(t *template.Template, name string, data interface{}) string {
 }
 
 // Render parses & render a template
-func Render(w http.ResponseWriter, tmpl string) {
+func Render(w http.ResponseWriter, tmpl string, data interface{}) {
 	tmpl = fmt.Sprintf("templates/%s", tmpl)
 	t, err := template.ParseFiles(tmpl)
 	if err != nil {
 		log.Print("template parsing error: ", err)
 	}
-	err = t.Execute(w, "")
+
+	err = t.Execute(w, data)
 	if err != nil {
 		log.Print("template executing error: ", err)
 	}

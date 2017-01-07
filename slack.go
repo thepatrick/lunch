@@ -6,8 +6,10 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/goji/param"
+	goji "goji.io"
+	"goji.io/pat"
 
+	"github.com/goji/param"
 	mgo "gopkg.in/mgo.v2"
 
 	"github.com/thepatrick/lunch/support"
@@ -36,12 +38,124 @@ type SlackResponse struct {
 
 // SlackAttachment is an attachment in a response to a slack command
 type SlackAttachment struct {
-	Title      string   `json:"title"`
-	Text       string   `json:"text"`
-	MarkdownIn []string `json:"mrkdwn_in"`
+	Title          string                  `json:"title"`
+	Text           string                  `json:"text"`
+	MarkdownIn     []string                `json:"mrkdwn_in"`
+	Fallback       string                  `json:"fallback"`
+	Color          string                  `json:"color"`
+	AttachmentType string                  `json:"attachment_type"`
+	Actions        []SlackAttachmentAction `json:"actions"`
+	CallbackID     string                  `json:"callback_id"`
 }
 
-func handleSlack(s *mgo.Session) http.HandlerFunc {
+// SlackAttachmentAction is an action button on a slack message
+type SlackAttachmentAction struct {
+	Name  string `json:"name"`
+	Text  string `json:"text"`
+	Style string `json:"style"`
+	Type  string `json:"type"`
+	Value string `json:"value"`
+	// Confirm SlackAttachmentConfirm `json:"confirm"`
+}
+
+// SlackAttachmentConfirm is a confirmation prompt on a SlackAttachmentAction
+type SlackAttachmentConfirm struct {
+	Title       string `json:"title"`
+	Text        string `json:"text"`
+	OkText      string `json:"ok_text"`
+	DismissText string `json:"dismiss_text"`
+}
+
+type slackActionPayload struct {
+	Actions    []SlackAttachmentAction `json:"actions"`
+	CallbackID string                  `json:"callback_id"`
+	Team       slackTeam               `json:"team"`
+	// UserID slackUser `json:"user"`
+	// ActionTs string `json:"action_ts"`
+	// MessageTs string `json:"message_ts"`
+	// AttachmentID string `json:"attachment_id"`
+	// Token string `json:"token"`
+	// OriginalMessage slackMessage `json:"original_message"`
+	// .. "text":"How about Somewhere",
+	// .. "bot_id":"B3M7BQ0A0",
+	// ... the message we sent
+	//..  "ts":"1483532908.000012"
+	// ResponseURL string `json:"response_url"`
+}
+
+type slackTeam struct {
+	ID     string `json:"id"`
+	Domain string `json:"domain"`
+}
+
+// type slackUser {
+// 	ID string `json:"id"`
+// 	Name string `json:"name"`
+// }
+// type slackChannel {
+// 	ID string `json:"id"`
+// 	Name string `json:"name"`
+// }
+
+func newSlackMux(config LunchConfig, session *mgo.Session) *goji.Mux {
+	mux := goji.SubMux()
+
+	mux.Handle(pat.New("/action"), handleSlackAction(config, session))
+	mux.Handle(pat.New("/command"), handleSlack(config, session))
+
+	mux.Use(support.Logging)
+	return mux
+}
+
+func handleSlackAction(config LunchConfig, s *mgo.Session) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		session := s.Copy()
+		defer session.Close()
+
+		err := r.ParseForm()
+		if err != nil {
+			support.ErrorWithJSON(w, "Incorrect body", http.StatusBadRequest)
+			return
+		}
+
+		rawPayload := r.Form.Get("payload")
+
+		var payload slackActionPayload
+
+		decoder := json.NewDecoder(strings.NewReader(rawPayload))
+		err = decoder.Decode(&payload)
+		if err != nil {
+			support.ErrorWithJSON(w, "Incorrect body", http.StatusBadRequest)
+			return
+		}
+
+		if len(payload.Actions) != 1 {
+			support.ErrorWithJSON(w, "Incorrect body", http.StatusBadRequest)
+			return
+		}
+
+		action := payload.Actions[0].Value
+
+		var response SlackResponse
+
+		if action == "skip" {
+			response = slackSkipPlace(payload.Team.ID, payload.CallbackID, session)
+		} else if action == "ok" {
+			response = slackOKPlace(payload.Team.ID, payload.CallbackID, session)
+		} else {
+			response = slackGetHelp(SlackCommand{})
+		}
+
+		respBody, err := json.MarshalIndent(response, "", "  ")
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		support.ResponseWithJSON(w, respBody, 200)
+	}
+}
+
+func handleSlack(config LunchConfig, s *mgo.Session) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		session := s.Copy()
 		defer session.Close()
@@ -69,12 +183,8 @@ func handleSlack(s *mgo.Session) http.HandlerFunc {
 
 		if len(words) == 0 {
 			response = slackSuggestPlace(command, session)
-		} else if words[0] == "skip" {
-			response = slackSkipPlace(command, words[1:], session)
-		} else if words[0] == "ok" {
-			response = slackOKPlace(command, words[1:], session)
 		} else if words[0] == "list" {
-			response = slackListPlaces(command, session)
+			response = slackListPlaces(config, command, session)
 		} else if words[0] == "add" {
 			response = slackAddPlace(command, words[1:], session)
 		} else {
@@ -96,7 +206,8 @@ func slackErrorResponse(response string) SlackResponse {
 }
 
 func slackGetHelp(command SlackCommand) SlackResponse {
-	message := "You said: \"" + command.Text + "\" to " + command.Command
+	message := "To add a place use: `" + command.Command + " add Awesome Place`" + "\n" +
+		"To get a suggestion use: `" + command.Command + "`"
 
 	var attachments []SlackAttachment
 	// attachments = append(attachments, SlackAttachment{"Go here", "/lunch visit $PLACE_ID"})
@@ -104,63 +215,59 @@ func slackGetHelp(command SlackCommand) SlackResponse {
 	return SlackResponse{"in_channel", message, attachments}
 }
 
-func slackAttachmentForPlace(command string, place Place) SlackAttachment {
+func slackAttachmentForPlace(place Place) SlackAttachment {
 	lunchURL := place.ID.Hex()
 
 	log.Println("lunchURL", lunchURL)
 
-	loveMessage := "Good for this one? `" + command + " ok " + lunchURL + "` "
-	skipMessage := "Don't like this? `" + command + " skip " + lunchURL + "`"
+	attachment := SlackAttachment{Title: "", Text: ""}
+	attachment.MarkdownIn = []string{"text"}
 
-	return SlackAttachment{"", loveMessage + "\n" + skipMessage, []string{"text"}}
+	attachment.CallbackID = place.ID.Hex()
+	attachment.Fallback = "You are unable to play this game, sorry."
+	attachment.Color = "#3AA3E3"
+	attachment.AttachmentType = "default"
+
+	okAction := SlackAttachmentAction{Name: "ok", Style: "primary", Text: "Sounds good", Type: "button", Value: "ok"}
+	skipAction := SlackAttachmentAction{Name: "skip", Text: "Not today", Type: "button", Value: "skip"}
+
+	attachment.Actions = []SlackAttachmentAction{okAction, skipAction}
+
+	return attachment
 }
 
 func slackSuggestPlace(command SlackCommand, s *mgo.Session) SlackResponse {
-	place, err := proposePlace(s)
+	place, err := proposePlace(s, command.TeamID)
 	if err != nil {
-		slackErrorResponse(err.Error())
+		return slackErrorResponse(err.Error() + " Maybe try adding one using `" + command.Command + " add Awesome Place`")
 	}
 
 	message := "How about " + place.Name
-	attachments := []SlackAttachment{slackAttachmentForPlace(command.Command, place)}
+	attachments := []SlackAttachment{slackAttachmentForPlace(place)}
 
 	return SlackResponse{"in_channel", message, attachments}
 }
 
-func slackSkipPlace(command SlackCommand, words []string, s *mgo.Session) SlackResponse {
-	if len(words) == 0 {
-		return slackErrorResponse("You forgot the place ID!")
-	}
-	if len(words) > 1 {
-		return slackErrorResponse("You said too much! I can only skip one place at a time.")
-	}
-
-	err := skipPlace(words[0], s)
+func slackSkipPlace(teamID string, placeID string, s *mgo.Session) SlackResponse {
+	err := skipPlace(s, teamID, placeID)
 
 	if err != nil {
 		return slackErrorResponse(err.Error())
 	}
 
-	place, err := proposePlace(s)
+	place, err := proposePlace(s, teamID)
 	if err != nil {
-		slackErrorResponse(err.Error())
+		return slackErrorResponse(err.Error())
 	}
 
 	message := "Ok, how about " + place.Name + "?"
-	attachments := []SlackAttachment{slackAttachmentForPlace(command.Command, place)}
+	attachments := []SlackAttachment{slackAttachmentForPlace(place)}
 
 	return SlackResponse{"in_channel", message, attachments}
 }
 
-func slackOKPlace(command SlackCommand, words []string, s *mgo.Session) SlackResponse {
-	if len(words) == 0 {
-		return slackErrorResponse("You forgot the place ID!")
-	}
-	if len(words) > 1 {
-		return slackErrorResponse("Oops, you can only go to one place at a time (for now?)")
-	}
-
-	err := visitPlace(words[0], s)
+func slackOKPlace(teamID string, placeID string, s *mgo.Session) SlackResponse {
+	err := visitPlace(s, teamID, placeID)
 
 	if err != nil {
 		return slackErrorResponse(err.Error())
@@ -170,19 +277,19 @@ func slackOKPlace(command SlackCommand, words []string, s *mgo.Session) SlackRes
 	return SlackResponse{"in_channel", message, []SlackAttachment{}}
 }
 
-func slackListPlaces(command SlackCommand, s *mgo.Session) SlackResponse {
-	places, err := allPlaces(s)
-	if err != nil {
-		return slackErrorResponse(err.Error())
-	}
+func slackListPlaces(config LunchConfig, command SlackCommand, s *mgo.Session) SlackResponse {
+	// places, err := allPlaces(s)
+	// if err != nil {
+	// 	return slackErrorResponse(err.Error())
+	// }
 
-	if len(places) == 0 {
-		return slackErrorResponse("No places yet, try `/" + command.Command + " add Place Name` to add your first one!")
-	}
+	// if len(places) == 0 {
+	// 	return slackErrorResponse("No places yet, try `/" + command.Command + " add Place Name` to add your first one!")
+	// }
 
-	listURL := "http://localhost:8080/places?teamID=" + command.TeamID + "&channelID=" + command.ChannelID + "&userID=" + command.UserID
+	listURL := config.Hostname + "/places"
 
-	return SlackResponse{"ephemeral", "To see the list of places go to [http://localhost:8080/places](" + listURL + ")", []SlackAttachment{}}
+	return SlackResponse{"ephemeral", "To see the list of places go to " + listURL, []SlackAttachment{}}
 }
 
 func slackAddPlace(command SlackCommand, words []string, s *mgo.Session) SlackResponse {
@@ -194,6 +301,7 @@ func slackAddPlace(command SlackCommand, words []string, s *mgo.Session) SlackRe
 
 	var place Place
 	place.Name = placeName
+	place.TeamID = command.TeamID
 
 	_, err := addPlace(place, s)
 
@@ -203,43 +311,3 @@ func slackAddPlace(command SlackCommand, words []string, s *mgo.Session) SlackRe
 
 	return SlackResponse{"ephemeral", "I've added " + placeName, []SlackAttachment{}}
 }
-
-// {
-//     "text": "Would you like to play a game?",
-//     "attachments": [
-//         {
-//             "text": "Choose a game to play",
-//             "fallback": "You are unable to choose a game",
-//             "callback_id": "wopr_game",
-//             "color": "#3AA3E3",
-//             "attachment_type": "default",
-//             "actions": [
-//                 {
-//                     "name": "chess",
-//                     "text": "Chess",
-//                     "type": "button",
-//                     "value": "chess"
-//                 },
-//                 {
-//                     "name": "maze",
-//                     "text": "Falken's Maze",
-//                     "type": "button",
-//                     "value": "maze"
-//                 },
-//                 {
-//                     "name": "war",
-//                     "text": "Thermonuclear War",
-//                     "style": "danger",
-//                     "type": "button",
-//                     "value": "war",
-//                     "confirm": {
-//                         "title": "Are you sure?",
-//                         "text": "Wouldn't you prefer a good game of chess?",
-//                         "ok_text": "Yes",
-//                         "dismiss_text": "No"
-//                     }
-//                 }
-//             ]
-//         }
-//     ]
-// }
