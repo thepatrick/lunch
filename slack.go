@@ -260,13 +260,13 @@ func slackSkipPlace(teamID string, placeID string, places *Places) SlackResponse
 }
 
 func slackOKPlace(teamID string, placeID string, places *Places) SlackResponse {
-	err := places.visitPlace(teamID, placeID)
+	place, err := places.visitPlace(teamID, placeID)
 
 	if err != nil {
 		return slackErrorResponse(err.Error())
 	}
 
-	message := "Ok, I'll remember."
+	message := "Ok, we're going to " + place.Name + " today!"
 	return SlackResponse{"in_channel", message, []SlackAttachment{}}
 }
 

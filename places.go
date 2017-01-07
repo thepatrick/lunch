@@ -181,7 +181,7 @@ func (places Places) addPlace(place Place) (string, error) {
 // 	}
 // }
 
-func (places Places) visitPlace(teamID string, id string) error {
+func (places Places) visitPlace(teamID string, id string) (Place, error) {
 	session := places.Session.Copy()
 	defer session.Close()
 
@@ -191,7 +191,7 @@ func (places Places) visitPlace(teamID string, id string) error {
 	err := c.Find(bson.M{"teamid": teamID, "_id": bson.ObjectIdHex(id)}).One(&place)
 	if err != nil {
 		log.Printf("Failed to find place %v error: %v\n", id, err)
-		return fmt.Errorf("Database error")
+		return Place{}, fmt.Errorf("Database error")
 	}
 
 	place.LastVisited = time.Now()
@@ -199,18 +199,18 @@ func (places Places) visitPlace(teamID string, id string) error {
 	err = c.Update(bson.M{"_id": bson.ObjectIdHex(id)}, &place)
 	if err != nil {
 		if mgo.IsDup(err) {
-			return fmt.Errorf("A place with that name already exists")
+			return Place{}, fmt.Errorf("A place with that name already exists")
 		}
 		switch err {
 		case mgo.ErrNotFound:
-			return fmt.Errorf("Place not found")
+			return Place{}, fmt.Errorf("Place not found")
 		default:
 			log.Println("Failed to update place: ", err)
-			return fmt.Errorf("Database error")
+			return Place{}, fmt.Errorf("Database error")
 		}
 	}
 
-	return nil
+	return place, nil
 }
 
 func (places Places) skipPlace(teamID string, id string) error {
