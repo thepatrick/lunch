@@ -10,7 +10,6 @@ import (
 	"goji.io/pat"
 
 	"github.com/goji/param"
-	mgo "gopkg.in/mgo.v2"
 
 	"github.com/thepatrick/lunch/support"
 )
@@ -97,21 +96,18 @@ type slackTeam struct {
 // 	Name string `json:"name"`
 // }
 
-func newSlackMux(config LunchConfig, session *mgo.Session) *goji.Mux {
+func newSlackMux(config LunchConfig, places *Places) *goji.Mux {
 	mux := goji.SubMux()
 
-	mux.Handle(pat.New("/action"), handleSlackAction(config, session))
-	mux.Handle(pat.New("/command"), handleSlack(config, session))
+	mux.Handle(pat.New("/action"), handleSlackAction(config, places))
+	mux.Handle(pat.New("/command"), handleSlack(config, places))
 
 	mux.Use(support.Logging)
 	return mux
 }
 
-func handleSlackAction(config LunchConfig, s *mgo.Session) http.HandlerFunc {
+func handleSlackAction(config LunchConfig, places *Places) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		session := s.Copy()
-		defer session.Close()
-
 		err := r.ParseForm()
 		if err != nil {
 			support.ErrorWithJSON(w, "Incorrect body", http.StatusBadRequest)
@@ -139,9 +135,9 @@ func handleSlackAction(config LunchConfig, s *mgo.Session) http.HandlerFunc {
 		var response SlackResponse
 
 		if action == "skip" {
-			response = slackSkipPlace(payload.Team.ID, payload.CallbackID, session)
+			response = slackSkipPlace(payload.Team.ID, payload.CallbackID, places)
 		} else if action == "ok" {
-			response = slackOKPlace(payload.Team.ID, payload.CallbackID, session)
+			response = slackOKPlace(payload.Team.ID, payload.CallbackID, places)
 		} else {
 			response = slackGetHelp(SlackCommand{})
 		}
@@ -155,11 +151,8 @@ func handleSlackAction(config LunchConfig, s *mgo.Session) http.HandlerFunc {
 	}
 }
 
-func handleSlack(config LunchConfig, s *mgo.Session) http.HandlerFunc {
+func handleSlack(config LunchConfig, places *Places) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		session := s.Copy()
-		defer session.Close()
-
 		err := r.ParseForm()
 		if err != nil {
 			support.ErrorWithJSON(w, "Incorrect body", http.StatusBadRequest)
@@ -182,11 +175,11 @@ func handleSlack(config LunchConfig, s *mgo.Session) http.HandlerFunc {
 		words := strings.Fields(command.Text)
 
 		if len(words) == 0 {
-			response = slackSuggestPlace(command, session)
+			response = slackSuggestPlace(command, places)
 		} else if words[0] == "list" {
-			response = slackListPlaces(config, command, session)
+			response = slackListPlaces(config, command, places)
 		} else if words[0] == "add" {
-			response = slackAddPlace(command, words[1:], session)
+			response = slackAddPlace(command, words[1:], places)
 		} else {
 			response = slackGetHelp(command)
 		}
@@ -236,8 +229,8 @@ func slackAttachmentForPlace(place Place) SlackAttachment {
 	return attachment
 }
 
-func slackSuggestPlace(command SlackCommand, s *mgo.Session) SlackResponse {
-	place, err := proposePlace(s, command.TeamID)
+func slackSuggestPlace(command SlackCommand, places *Places) SlackResponse {
+	place, err := places.proposePlace(command.TeamID)
 	if err != nil {
 		return slackErrorResponse(err.Error() + " Maybe try adding one using `" + command.Command + " add Awesome Place`")
 	}
@@ -248,14 +241,14 @@ func slackSuggestPlace(command SlackCommand, s *mgo.Session) SlackResponse {
 	return SlackResponse{"in_channel", message, attachments}
 }
 
-func slackSkipPlace(teamID string, placeID string, s *mgo.Session) SlackResponse {
-	err := skipPlace(s, teamID, placeID)
+func slackSkipPlace(teamID string, placeID string, places *Places) SlackResponse {
+	err := places.skipPlace(teamID, placeID)
 
 	if err != nil {
 		return slackErrorResponse(err.Error())
 	}
 
-	place, err := proposePlace(s, teamID)
+	place, err := places.proposePlace(teamID)
 	if err != nil {
 		return slackErrorResponse(err.Error())
 	}
@@ -266,8 +259,8 @@ func slackSkipPlace(teamID string, placeID string, s *mgo.Session) SlackResponse
 	return SlackResponse{"in_channel", message, attachments}
 }
 
-func slackOKPlace(teamID string, placeID string, s *mgo.Session) SlackResponse {
-	err := visitPlace(s, teamID, placeID)
+func slackOKPlace(teamID string, placeID string, places *Places) SlackResponse {
+	err := places.visitPlace(teamID, placeID)
 
 	if err != nil {
 		return slackErrorResponse(err.Error())
@@ -277,7 +270,7 @@ func slackOKPlace(teamID string, placeID string, s *mgo.Session) SlackResponse {
 	return SlackResponse{"in_channel", message, []SlackAttachment{}}
 }
 
-func slackListPlaces(config LunchConfig, command SlackCommand, s *mgo.Session) SlackResponse {
+func slackListPlaces(config LunchConfig, command SlackCommand, places *Places) SlackResponse {
 	// places, err := allPlaces(s)
 	// if err != nil {
 	// 	return slackErrorResponse(err.Error())
@@ -292,7 +285,7 @@ func slackListPlaces(config LunchConfig, command SlackCommand, s *mgo.Session) S
 	return SlackResponse{"ephemeral", "To see the list of places go to " + listURL, []SlackAttachment{}}
 }
 
-func slackAddPlace(command SlackCommand, words []string, s *mgo.Session) SlackResponse {
+func slackAddPlace(command SlackCommand, words []string, places *Places) SlackResponse {
 	if len(words) == 0 {
 		return slackErrorResponse("You forgot the place name!")
 	}
@@ -303,7 +296,7 @@ func slackAddPlace(command SlackCommand, words []string, s *mgo.Session) SlackRe
 	place.Name = placeName
 	place.TeamID = command.TeamID
 
-	_, err := addPlace(place, s)
+	_, err := places.addPlace(place)
 
 	if err != nil {
 		return slackErrorResponse(err.Error())

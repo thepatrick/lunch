@@ -22,6 +22,7 @@ type LunchConfig struct {
 	ClientID     string
 	ClientSecret string
 	MongoURL     string
+	DatabaseName string
 	Hostname     string
 	Port         int
 }
@@ -38,6 +39,7 @@ func main() {
 		ClientID:     os.Getenv("LUNCH_CLIENT_ID"),
 		ClientSecret: os.Getenv("LUNCH_CLIENT_SECRET"),
 		MongoURL:     os.Getenv("LUNCH_MONGO_URL"),
+		DatabaseName: os.Getenv("LUNCH_MONGO_DB"),
 		Hostname:     os.Getenv("LUNCH_HOSTNAME"),
 		Port:         port,
 	}
@@ -50,11 +52,11 @@ func main() {
 
 	// session.SetMode(mgo.Monotonic, true)
 
-	ensurePlacesIndex(session)
+	places := newPlaces(session, config.DatabaseName)
 
 	mux := goji.NewMux()
 
-	mux.Handle(pat.New("/slack/*"), newSlackMux(config, session))
+	mux.Handle(pat.New("/slack/*"), newSlackMux(config, places))
 	mux.Handle(pat.New("/install/*"), newInstallMux(config))
 
 	// mux.HandleFunc(pat.Get("/"), allPlacesHTTP(session))

@@ -19,11 +19,28 @@ type Place struct {
 	LastSkipped time.Time     `json:"last_skipped"`
 }
 
-func ensurePlacesIndex(s *mgo.Session) {
-	session := s.Copy()
+// Places are where you go to lunch
+type Places struct {
+	Session      *mgo.Session
+	DatabaseName string
+}
+
+func newPlaces(session *mgo.Session, databaseName string) *Places {
+	places := &Places{
+		Session:      session,
+		DatabaseName: databaseName,
+	}
+
+	places.ensurePlacesIndex()
+
+	return places
+}
+
+func (places Places) ensurePlacesIndex() {
+	session := places.Session.Copy()
 	defer session.Close()
 
-	c := session.DB("lunch").C("places")
+	c := session.DB(places.DatabaseName).C("places")
 
 	nameIndex := mgo.Index{
 		Key:        []string{"name", "teamid"},
@@ -51,20 +68,20 @@ func ensurePlacesIndex(s *mgo.Session) {
 	}
 }
 
-func allPlaces(s *mgo.Session, teamID string) ([]Place, error) {
-	session := s.Copy()
+func (places Places) allPlaces(teamID string) ([]Place, error) {
+	session := places.Session.Copy()
 	defer session.Close()
 
-	c := session.DB("lunch").C("places")
+	c := session.DB(places.DatabaseName).C("places")
 
-	var places []Place
-	err := c.Find(bson.M{"teamid": teamID}).All(&places)
+	var thePlaces []Place
+	err := c.Find(bson.M{"teamid": teamID}).All(&thePlaces)
 	if err != nil {
 		log.Println("Failed to get all books: ", err)
 		return nil, fmt.Errorf("Database error")
 	}
 
-	return places, nil
+	return thePlaces, nil
 }
 
 func onlyProposablePlaces(vs []Place) []Place {
@@ -87,38 +104,38 @@ func sortProposablePlaces(vs []Place) []Place {
 	return vs
 }
 
-func proposePlace(s *mgo.Session, teamID string) (Place, error) {
-	session := s.Copy()
+func (places Places) proposePlace(teamID string) (Place, error) {
+	session := places.Session.Copy()
 	defer session.Close()
 
-	c := session.DB("lunch").C("places")
+	c := session.DB(places.DatabaseName).C("places")
 
-	var places []Place
-	err := c.Find(bson.M{"teamid": teamID}).All(&places)
+	var allPlaces []Place
+	err := c.Find(bson.M{"teamid": teamID}).All(&allPlaces)
 	if err != nil {
 		log.Println("Failed to get all places: ", err)
 		return Place{}, fmt.Errorf("Database error")
 	}
 
-	places = onlyProposablePlaces(places)
+	allPlaces = onlyProposablePlaces(allPlaces)
 
-	if len(places) == 0 {
+	if len(allPlaces) == 0 {
 		log.Printf("We have nowhere to go :(")
 		return Place{}, fmt.Errorf("There are no places that haven't been skipped or visited recently")
 	}
 
-	places = sortProposablePlaces(places)
+	allPlaces = sortProposablePlaces(allPlaces)
 
-	log.Printf("We have %v places!\n", len(places))
+	log.Printf("We have %v places!\n", len(allPlaces))
 
-	return places[0], nil
+	return allPlaces[0], nil
 }
 
-func addPlace(place Place, s *mgo.Session) (string, error) {
-	session := s.Copy()
+func (places Places) addPlace(place Place) (string, error) {
+	session := places.Session.Copy()
 	defer session.Close()
 
-	c := session.DB("lunch").C("places")
+	c := session.DB(places.DatabaseName).C("places")
 
 	log.Printf("Adding %v in %v", place.Name, place.TeamID)
 
@@ -164,11 +181,11 @@ func addPlace(place Place, s *mgo.Session) (string, error) {
 // 	}
 // }
 
-func visitPlace(s *mgo.Session, teamID string, id string) error {
-	session := s.Copy()
+func (places Places) visitPlace(teamID string, id string) error {
+	session := places.Session.Copy()
 	defer session.Close()
 
-	c := session.DB("lunch").C("places")
+	c := session.DB(places.DatabaseName).C("places")
 
 	var place Place
 	err := c.Find(bson.M{"teamid": teamID, "_id": bson.ObjectIdHex(id)}).One(&place)
@@ -196,11 +213,11 @@ func visitPlace(s *mgo.Session, teamID string, id string) error {
 	return nil
 }
 
-func skipPlace(s *mgo.Session, teamID string, id string) error {
-	session := s.Copy()
+func (places Places) skipPlace(teamID string, id string) error {
+	session := places.Session.Copy()
 	defer session.Close()
 
-	c := session.DB("lunch").C("places")
+	c := session.DB(places.DatabaseName).C("places")
 
 	var place Place
 	err := c.Find(bson.M{"teamid": teamID, "_id": bson.ObjectIdHex(id)}).One(&place)
