@@ -64,7 +64,7 @@ func installHomepage(config LunchConfig) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Get a session. We're ignoring the error resulted from decoding an
 		// existing session: Get() always returns a session, even if empty.
-		session, err := store.Get(r, "lunch-session")
+		session, err := store.Get(r, "install-session")
 		if err != nil {
 			// http.Error(w, err.Error(), http.StatusInternalServerError)
 			log.Printf("Failed to get session: %v\n", err)
@@ -85,7 +85,7 @@ func logout(w http.ResponseWriter, r *http.Request) {
 	// Get a session. We're ignoring the error resulted from decoding an
 	// existing session: Get() always returns a session, even if empty.
 
-	session, err := store.Get(r, "lunch-session")
+	session, err := store.Get(r, "install-session")
 	if err != nil {
 		// http.Error(w, err.Error(), http.StatusInternalServerError)
 		log.Printf("Failed to create session: %v\n", err)
@@ -110,7 +110,7 @@ func slackRedirect(config LunchConfig) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Get a session. We're ignoring the error resulted from decoding an
 		// existing session: Get() always returns a session, even if empty.
-		session, err := store.Get(r, "lunch-session")
+		session, err := store.Get(r, "install-session")
 		if err != nil {
 			// http.Error(w, err.Error(), http.StatusInternalServerError)
 			log.Printf("Failed to get session: %v\n", err)

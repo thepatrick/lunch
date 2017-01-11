@@ -15,7 +15,7 @@ import (
 	"goji.io/pat"
 )
 
-var store = sessions.NewCookieStore([]byte("something-very-secret"))
+var store sessions.Store
 
 // LunchConfig encapsulate all of the config needed to run this Slack App
 type LunchConfig struct {
@@ -44,6 +44,8 @@ func main() {
 		Port:         port,
 	}
 
+	store = sessions.NewCookieStore([]byte(os.Getenv("LUNCH_SESSION_SECRET")))
+
 	session, err := mgo.Dial(config.MongoURL)
 	if err != nil {
 		panic(err)
@@ -58,11 +60,16 @@ func main() {
 
 	mux.Handle(pat.New("/slack/*"), newSlackMux(config, places))
 	mux.Handle(pat.New("/install/*"), newInstallMux(config))
+	mux.Handle(pat.New("/install"), simpleRedirect("/install/"))
+	mux.Handle(pat.New("/places/*"), newManageMux(config, places))
+	mux.Handle(pat.New("/places"), simpleRedirect("/places/"))
 
 	// mux.HandleFunc(pat.Get("/"), allPlacesHTTP(session))
 	// mux.HandleFunc(pat.Get("/:id"), placeByID(session))
 	// mux.HandleFunc(pat.Put("/:id"), updatePlace(session))
 	// mux.HandleFunc(pat.Delete("/:id"), deletePlace(session))
+
+	mux.Handle(pat.New("/static/*"), http.FileServer(http.Dir(".")))
 
 	mux.HandleFunc(pat.New("/"), homepage)
 
@@ -84,4 +91,10 @@ func homepage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	support.Render(w, "index.html", data)
+}
+
+func simpleRedirect(toURL string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, toURL, http.StatusFound)
+	}
 }
