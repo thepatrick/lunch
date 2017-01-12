@@ -40,6 +40,18 @@ func addToSlackPage(w http.ResponseWriter, config LunchConfig) {
 	support.Render(w, "install/prompt.html", data)
 }
 
+func installFailed(w http.ResponseWriter) {
+
+	data := struct {
+		Title     string
+		LogoutURL string
+	}{
+		Title:     "Install Lunch Bot",
+		LogoutURL: "/install/logout",
+	}
+	support.Render(w, "500.html", data)
+}
+
 func loggedinUserPage(w http.ResponseWriter, session *sessions.Session) {
 	accessToken := session.Values["access_token"].(string)
 
@@ -50,7 +62,7 @@ func loggedinUserPage(w http.ResponseWriter, session *sessions.Session) {
 
 	if err != nil {
 		log.Printf("Failed to get user identity: %v\n", err)
-		support.Render(w, "500.html", nil)
+		installFailed(w)
 		return
 	}
 
@@ -68,7 +80,7 @@ func installHomepage(config LunchConfig) http.HandlerFunc {
 		if err != nil {
 			// http.Error(w, err.Error(), http.StatusInternalServerError)
 			log.Printf("Failed to get session: %v\n", err)
-			support.Render(w, "500.html", nil)
+			installFailed(w)
 			return
 		}
 
@@ -89,7 +101,7 @@ func logout(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		// http.Error(w, err.Error(), http.StatusInternalServerError)
 		log.Printf("Failed to create session: %v\n", err)
-		support.Render(w, "500.html", nil)
+		installFailed(w)
 		return
 	}
 
@@ -114,7 +126,7 @@ func slackRedirect(config LunchConfig) http.HandlerFunc {
 		if err != nil {
 			// http.Error(w, err.Error(), http.StatusInternalServerError)
 			log.Printf("Failed to get session: %v\n", err)
-			support.Render(w, "500.html", nil)
+			installFailed(w)
 			return
 		}
 
@@ -142,20 +154,20 @@ func slackRedirect(config LunchConfig) http.HandlerFunc {
 		resp, _, errs := gorequest.New().Get(slackURL).EndStruct(&oauthSuccess)
 
 		if errs != nil {
-			support.Render(w, "500.html", nil)
+			installFailed(w)
 			log.Printf("Failed to get slack oauth.access: %v\n", errs)
 			return
 		}
 
 		if resp.StatusCode != 200 {
 			log.Printf("Failed to get slack oauth.success: %v\n", resp.StatusCode)
-			support.Render(w, "500.html", nil)
+			installFailed(w)
 			return
 		}
 
 		if !oauthSuccess.Ok {
 			log.Printf("Failed to get slack oauth.success: ok is false\n")
-			support.Render(w, "500.html", nil)
+			installFailed(w)
 			return
 		}
 
