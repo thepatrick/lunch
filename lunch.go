@@ -61,15 +61,14 @@ func main() {
 	mux.Handle(pat.New("/slack/*"), newSlackMux(config, places))
 	mux.Handle(pat.New("/install/*"), newInstallMux(config))
 	mux.Handle(pat.New("/install"), simpleRedirect("/install/"))
-	mux.Handle(pat.New("/places/*"), newManageMux(config, places))
-	mux.Handle(pat.New("/places"), simpleRedirect("/places/"))
 
-	// mux.HandleFunc(pat.Get("/"), allPlacesHTTP(session))
-	// mux.HandleFunc(pat.Get("/:id"), placeByID(session))
-	// mux.HandleFunc(pat.Put("/:id"), updatePlace(session))
-	// mux.HandleFunc(pat.Delete("/:id"), deletePlace(session))
+	mux.Handle(pat.New("/manage/api/*"), newManageMux("/manage/", config, places))
 
-	mux.Handle(pat.New("/static/*"), http.FileServer(http.Dir(".")))
+	mux.Handle(pat.New("/places/*"), simpleRedirect("/manage/"))
+	mux.Handle(pat.New("/places"), simpleRedirect("/manage/"))
+
+	mux.Handle(pat.New("/manage/*"), http.FileServer(http.Dir("./static/")))
+	mux.Handle(pat.New("/manage"), simpleRedirect("/manage/"))
 
 	mux.HandleFunc(pat.New("/"), homepage)
 

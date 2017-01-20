@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"log"
 	"net/http"
 
@@ -14,41 +15,6 @@ import (
 	"github.com/gorilla/sessions"
 	"github.com/thepatrick/lunch/support"
 )
-
-func managePlacesPage(w http.ResponseWriter, session *sessions.Session, places *Places) {
-	accessToken := session.Values["access_token"].(string)
-
-	api := slack.New(accessToken)
-	api.SetDebug(true)
-
-	user, err := api.GetUserIdentity()
-
-	if err != nil {
-		log.Printf("Failed to get user identity: %v\n", err)
-		manageFailed(w)
-		return
-	}
-
-	log.Printf("Got user identity!: %v\n", user.Team.Name)
-
-	allPlaces, err := places.allPlaces(user.Team.ID)
-	if err != nil {
-		log.Printf("Failed to get all places: %v\n", err)
-		manageFailed(w)
-		return
-	}
-
-	data := struct {
-		TeamName string
-		Places   []Place
-	}{
-		user.Team.Name,
-		allPlaces,
-	}
-
-	support.Render(w, "places/index.html", data)
-	return
-}
 
 func slackAuthorizeURL(config LunchConfig, scope string, redirect string) string {
 	urlData := struct {
@@ -65,7 +31,24 @@ func slackAuthorizeURL(config LunchConfig, scope string, redirect string) string
 	return "https://slack.com/oauth/authorize?" + v.Encode()
 }
 
-func manageHomepage(config LunchConfig, places *Places) http.HandlerFunc {
+func manageLogout(root string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		session, err := store.Get(r, "places-session")
+		if err != nil {
+			// http.Error(w, err.Error(), http.StatusInternalServerError)
+			log.Printf("Failed to create session: %v\n", err)
+			manageFailed(root, w)
+			return
+		}
+
+		session.Options.MaxAge = -1
+		sessions.Save(r, w)
+
+		http.Redirect(w, r, "/", http.StatusFound)
+	}
+}
+
+func manageSlackRedirect(root string, config LunchConfig) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Get a session. We're ignoring the error resulted from decoding an
 		// existing session: Get() always returns a session, even if empty.
@@ -73,57 +56,16 @@ func manageHomepage(config LunchConfig, places *Places) http.HandlerFunc {
 		if err != nil {
 			// http.Error(w, err.Error(), http.StatusInternalServerError)
 			log.Printf("Failed to get session: %v\n", err)
-			manageFailed(w)
-			return
-		}
-
-		if session.Values["access_token"] == nil || session.Values["team_id"] == nil {
-			authorizeURL := slackAuthorizeURL(config, "identity.basic,identity.team", "/places/redirect")
-			log.Printf("Authorize URL: %v\n", authorizeURL)
-			http.Redirect(w, r, authorizeURL, http.StatusFound)
-			return
-		}
-
-		managePlacesPage(w, session, places)
-	}
-}
-
-func manageLogout(w http.ResponseWriter, r *http.Request) {
-	// Get a session. We're ignoring the error resulted from decoding an
-	// existing session: Get() always returns a session, even if empty.
-
-	session, err := store.Get(r, "places-session")
-	if err != nil {
-		// http.Error(w, err.Error(), http.StatusInternalServerError)
-		log.Printf("Failed to create session: %v\n", err)
-		manageFailed(w)
-		return
-	}
-
-	session.Options.MaxAge = -1
-	sessions.Save(r, w)
-
-	http.Redirect(w, r, "/", http.StatusFound)
-}
-
-func manageSlackRedirect(config LunchConfig) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		// Get a session. We're ignoring the error resulted from decoding an
-		// existing session: Get() always returns a session, even if empty.
-		session, err := store.Get(r, "places-session")
-		if err != nil {
-			// http.Error(w, err.Error(), http.StatusInternalServerError)
-			log.Printf("Failed to get session: %v\n", err)
-			manageFailed(w)
+			manageFailed(root, w)
 			return
 		}
 
 		code := r.URL.Query().Get("code")
 
-		accessToken, err := support.GetAccessToken(config.ClientID, config.ClientSecret, config.Hostname+"/places/redirect", code)
+		accessToken, err := support.GetAccessToken(config.ClientID, config.ClientSecret, config.Hostname+root+"api/redirect", code)
 
 		if err != nil {
-			manageFailed(w)
+			manageFailed(root, w)
 			log.Printf("Failed to get slack oauth.access: %v\n", err)
 			return
 		}
@@ -134,28 +76,126 @@ func manageSlackRedirect(config LunchConfig) http.HandlerFunc {
 
 		log.Printf("Created session with access_token %v and team_id %v\n", accessToken.AccessToken, accessToken.TeamID)
 
-		http.Redirect(w, r, "/places/", http.StatusFound)
+		// session.Values["back"] default to /places/
+		http.Redirect(w, r, root, http.StatusFound)
 	}
 }
 
-func manageFailed(w http.ResponseWriter) {
+func manageFailed(root string, w http.ResponseWriter) {
 
 	data := struct {
 		Title     string
 		LogoutURL string
 	}{
 		Title:     "Manage Lunch Bot",
-		LogoutURL: "/places/logout",
+		LogoutURL: root + "/api/logout",
 	}
 	support.Render(w, "500.html", data)
 }
 
-func newManageMux(config LunchConfig, places *Places) *goji.Mux {
+func manageLogin(root string, config LunchConfig) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// session.Values["back"] = r.URL.Query().Get("back")
+		// session.Save(r, w)
+		authorizeURL := slackAuthorizeURL(config, "identity.basic,identity.team", root+"api/redirect")
+		log.Printf("Authorize URL: %v\n", authorizeURL)
+		http.Redirect(w, r, authorizeURL, http.StatusFound)
+	}
+}
+
+func managePlacesAll(config LunchConfig, places *Places) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		session, err := store.Get(r, "places-session")
+		if err != nil {
+			// http.Error(w, err.Error(), http.StatusInternalServerError)
+			log.Printf("Failed to create session: %v\n", err)
+			support.ErrorWithJSON(w, "Failed to create session", http.StatusInternalServerError)
+			return
+		}
+
+		if session.Values["access_token"] == nil || session.Values["team_id"] == nil {
+			support.ErrorWithJSON(w, "Failed to get user identity", http.StatusUnauthorized)
+			return
+		}
+
+		accessToken := session.Values["access_token"].(string)
+
+		api := slack.New(accessToken)
+		api.SetDebug(true)
+
+		user, err := api.GetUserIdentity()
+
+		if err != nil {
+			log.Printf("Failed to get user identity: %v\n", err)
+			support.ErrorWithJSON(w, "Failed to get user identity", http.StatusUnauthorized)
+			return
+		}
+
+		allPlaces, err := places.allPlaces(user.Team.ID)
+		if err != nil {
+			log.Printf("Failed to get all places: %v\n", err)
+			support.ErrorWithJSON(w, "Failed to get places", http.StatusInternalServerError)
+			return
+		}
+
+		respBody, err := json.MarshalIndent(allPlaces, "", "  ")
+		if err != nil {
+			log.Fatal(err)
+			support.ErrorWithJSON(w, "Failed to generate JSON", http.StatusInternalServerError)
+			return
+		}
+
+		support.ResponseWithJSON(w, respBody, http.StatusOK)
+	}
+
+}
+
+func manageWhoami(config LunchConfig) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		session, err := store.Get(r, "places-session")
+		if err != nil {
+			log.Printf("Failed to create session: %v\n", err)
+			support.ErrorWithJSON(w, "Failed to create session", http.StatusInternalServerError)
+			return
+		}
+
+		if session.Values["access_token"] == nil || session.Values["team_id"] == nil {
+			support.ErrorWithJSON(w, "Failed to get user identity", http.StatusUnauthorized)
+			return
+		}
+
+		accessToken := session.Values["access_token"].(string)
+
+		api := slack.New(accessToken)
+		api.SetDebug(true)
+
+		user, err := api.GetUserIdentity()
+
+		if err != nil {
+			log.Printf("Failed to get user identity: %v\n", err)
+			support.ErrorWithJSON(w, "Failed to get user identity", http.StatusUnauthorized)
+			return
+		}
+
+		respBody, err := json.MarshalIndent(user, "", "  ")
+		if err != nil {
+			log.Fatal(err)
+			support.ErrorWithJSON(w, "Failed to generate JSON", http.StatusInternalServerError)
+			return
+		}
+
+		support.ResponseWithJSON(w, respBody, http.StatusOK)
+	}
+}
+
+func newManageMux(root string, config LunchConfig, places *Places) *goji.Mux {
 	mux := goji.SubMux()
 
-	mux.HandleFunc(pat.Get("/redirect"), manageSlackRedirect(config))
-	mux.HandleFunc(pat.Get("/logout"), manageLogout)
-	mux.HandleFunc(pat.Get("/"), manageHomepage(config, places))
+	mux.HandleFunc(pat.Get("/logout"), manageLogout(root))
+	mux.HandleFunc(pat.Get("/redirect"), manageSlackRedirect(root, config))
+	mux.HandleFunc(pat.Get("/whoami"), manageWhoami(config))
+	mux.HandleFunc(pat.Get("/places"), managePlacesAll(config, places))
+	mux.HandleFunc(pat.Get("/login"), manageLogin(root, config))
 
 	mux.Use(support.Logging)
 	return mux

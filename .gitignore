@@ -25,3 +25,6 @@ _testmain.go
 
 run.sh
 lunch
+
+node_modules
+static
