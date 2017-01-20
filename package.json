@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "A simple go app for choosing lunch venues",
   "main": "index.js",
+  "engines": {
+    "node": "6.9.1"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "webpack --watch",
