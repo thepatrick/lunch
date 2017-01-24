@@ -1,9 +1,14 @@
 import React, { PropTypes } from 'react';
+import { Link } from 'react-router';
 import PlaceDate from './PlaceDate';
 
-const Place = ({ name, lastVisited, lastSkipped }) => (
+const Place = ({ editUrl, name, lastVisited, lastSkipped }) => (
   <tr>
-    <td>{name}</td>
+    <td>
+      {/*<Link to={editUrl}>*/}
+        {name}
+      {/*</Link>*/}
+    </td>
     <td>
       <PlaceDate
         date={lastVisited}
@@ -20,9 +25,15 @@ const Place = ({ name, lastVisited, lastSkipped }) => (
 );
 
 Place.propTypes = {
+  editUrl: PropTypes.string.isRequired,
   name: PropTypes.string.isRequired,
   lastVisited: PropTypes.instanceOf(Date),
   lastSkipped: PropTypes.instanceOf(Date),
 };
+
+Place.defaultProps = {
+  lastVisited: undefined,
+  lastSkipped: undefined,
+}
 
 export default Place;

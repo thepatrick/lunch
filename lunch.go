@@ -67,8 +67,10 @@ func main() {
 	mux.Handle(pat.New("/places/*"), simpleRedirect("/manage/"))
 	mux.Handle(pat.New("/places"), simpleRedirect("/manage/"))
 
-	mux.Handle(pat.New("/manage/*"), http.FileServer(http.Dir("./static/")))
-	mux.Handle(pat.New("/manage"), simpleRedirect("/manage/"))
+	mux.Handle(pat.New("/manage/*"), simpleFile("./static/manage/index.html"))
+	mux.Handle(pat.New("/manage"), simpleFile("./static/manage/index.html"))
+
+	mux.Handle(pat.New("/static/*"), http.StripPrefix("/static/", http.FileServer(http.Dir("./static/"))))
 
 	mux.HandleFunc(pat.New("/"), homepage)
 
@@ -95,5 +97,11 @@ func homepage(w http.ResponseWriter, r *http.Request) {
 func simpleRedirect(toURL string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, toURL, http.StatusFound)
+	}
+}
+
+func simpleFile(fileName string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, fileName)
 	}
 }

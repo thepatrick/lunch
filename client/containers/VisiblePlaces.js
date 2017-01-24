@@ -1,9 +1,11 @@
 import { connect } from 'react-redux';
 import PlaceList from '../components/PlaceList';
 
-const getPlaces = (places, placeIds) => {
-  return placeIds.map(placeId => places[placeId]);
-};
+const getPlaces = (places, placeIds) => (
+  placeIds.map(placeId => places[placeId]).map(place => (
+    Object.assign({}, place, { editUrl: `/manage/places/${place.id}` })
+  ))
+);
 
 const mapStateToProps = state => (
   {

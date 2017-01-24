@@ -2,13 +2,11 @@ import React from 'react';
 import thunkMiddleware from 'redux-thunk';
 import createLogger from 'redux-logger';
 import { render } from 'react-dom';
-import { Provider } from 'react-redux';
 import { createStore, applyMiddleware } from 'redux';
 import todoApp from './reducers';
-import AppContainer from './containers/AppContainer';
 import { fetchCurrentUser, fetchAllPlaces } from './actions';
 
-import ConnectedIntlProvider from './containers/ConnectedIntlProvider';
+import Root from './components/Root';
 
 require('bootstrap-loader');
 require('whatwg-fetch');
@@ -32,10 +30,6 @@ const root = document.createElement('div');
 document.body.appendChild(root);
 
 render(
-  <Provider store={store}>
-    <ConnectedIntlProvider>
-      <AppContainer />
-    </ConnectedIntlProvider>
-  </Provider>,
+  <Root store={store} />,
   root,
 );
