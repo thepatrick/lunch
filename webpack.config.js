@@ -84,7 +84,7 @@ module.exports = {
 };
 
 if (process.env.NODE_ENV === 'production') {
-  module.exports = module.exports.concat(
+  module.exports.plugins = module.exports.plugins.concat(
       new webpackUglifyJsPlugin({
         enabled: process.env.NODE_ENV === 'production',
         cacheFolder: path.resolve(__dirname, 'static/cached_uglify/'),
