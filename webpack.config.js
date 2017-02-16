@@ -36,18 +36,6 @@ module.exports = {
       hashFuncNames: ['sha256', 'sha384'],
       enabled: process.env.NODE_ENV === 'production',
     }),
-    new webpackUglifyJsPlugin({
-      cacheFolder: path.resolve(__dirname, 'static/cached_uglify/'),
-      debug: process.env.NODE_ENV !== 'production',
-      minimize: process.env.NODE_ENV === 'production',
-      sourceMap: process.env.NODE_ENV !== 'production',
-      output: {
-        comments: process.env.NODE_ENV !== 'production'
-      },
-      compressor: {
-        warnings: process.env.NODE_ENV === 'production'
-      }
-    }),
     new webpack.DefinePlugin({
       "process.env.NODE_ENV": JSON.stringify(process.env.NODE_ENV || 'development'),
     })
@@ -94,3 +82,21 @@ module.exports = {
     crossOriginLoading: 'anonymous',
   },
 };
+
+if (process.env.NODE_ENV === 'production') {
+  module.exports = module.exports.concat(
+      new webpackUglifyJsPlugin({
+        enabled: process.env.NODE_ENV === 'production',
+        cacheFolder: path.resolve(__dirname, 'static/cached_uglify/'),
+        debug: process.env.NODE_ENV !== 'production',
+        minimize: process.env.NODE_ENV === 'production',
+        sourceMap: process.env.NODE_ENV !== 'production',
+        output: {
+          comments: process.env.NODE_ENV !== 'production'
+        },
+        compressor: {
+          warnings: process.env.NODE_ENV === 'production'
+        }
+      })
+  );
+}
