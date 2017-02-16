@@ -100,11 +100,27 @@ func (places Places) allPlaces(teamID string) ([]Place, error) {
 	var thePlaces []Place
 	err := c.Find(bson.M{"teamid": teamID}).All(&thePlaces)
 	if err != nil {
-		log.Println("Failed to get all books: ", err)
+		log.Println("Failed to get all places: ", err)
 		return nil, fmt.Errorf("Database error")
 	}
 
 	return thePlaces, nil
+}
+
+func (places Places) findByID(teamID string, id string) (Place, error) {
+	session := places.Session.Copy()
+	defer session.Close()
+
+	c := session.DB(places.DatabaseName).C("places")
+
+	var place Place
+	err := c.Find(bson.M{"teamid": teamID, "_id": bson.ObjectIdHex(id)}).One(&place)
+	if err != nil {
+		log.Printf("Failed to find place %v error: %v\n", id, err)
+		return Place{}, fmt.Errorf("Database error")
+	}
+
+	return place, nil
 }
 
 func onlyProposablePlaces(vs []Place) []Place {
@@ -204,6 +220,34 @@ func (places Places) addPlace(place Place) (string, error) {
 // 	}
 // }
 
+func (places Places) updatePlace(teamID string, id string, updates interface{}) error {
+	session := places.Session.Copy()
+	defer session.Close()
+
+	c := session.DB(places.DatabaseName).C("places")
+
+	err := c.Update(bson.M{
+		"_id":    bson.ObjectIdHex(id),
+		"teamid": teamID,
+	}, bson.M{
+		"$set": &updates,
+	})
+	if err != nil {
+		if mgo.IsDup(err) {
+			return fmt.Errorf("A place with that name already exists")
+		}
+		switch err {
+		case mgo.ErrNotFound:
+			return fmt.Errorf("Place not found")
+		default:
+			log.Println("Failed to update place: ", err)
+			return fmt.Errorf("Database error")
+		}
+	}
+
+	return nil
+}
+
 func (places Places) visitPlace(teamID string, id string) (Place, error) {
 	session := places.Session.Copy()
 	defer session.Close()
@@ -268,49 +312,6 @@ func (places Places) skipPlace(teamID string, id string) error {
 	return nil
 }
 
-// func updatePlace(s *mgo.Session) http.HandlerFunc {
-// 	return func(w http.ResponseWriter, r *http.Request) {
-// 		session := s.Copy()
-// 		defer session.Close()
-
-// 		id := pat.Param(r, "id")
-
-// 		var place Place
-// 		decoder := json.NewDecoder(r.Body)
-// 		err := decoder.Decode(&place)
-// 		if err != nil {
-// 			support.ErrorWithJSON(w, "Incorrect body", http.StatusBadRequest)
-// 			return
-// 		}
-
-// 		if place.Name == "" {
-// 			support.ErrorWithJSON(w, "Incorrect body", http.StatusBadRequest)
-// 			return
-// 		}
-
-// 		c := session.DB("lunch").C("places")
-
-// 		err = c.Update(bson.M{"_id": bson.ObjectIdHex(id)}, &place)
-// 		if err != nil {
-// 			if mgo.IsDup(err) {
-// 				support.ErrorWithJSON(w, "A place with this name already exists", http.StatusBadRequest)
-// 				return
-// 			}
-// 			switch err {
-// 			case mgo.ErrNotFound:
-// 				support.ErrorWithJSON(w, "Place not found", http.StatusNotFound)
-// 				return
-// 			default:
-// 				support.ErrorWithJSON(w, "Database error", http.StatusInternalServerError)
-// 				log.Println("Failed to update place: ", err)
-// 				return
-// 			}
-// 		}
-
-// 		w.WriteHeader(http.StatusNoContent)
-// 	}
-// }
-
 // func deletePlace(s *mgo.Session) http.HandlerFunc {
 // 	return func(w http.ResponseWriter, r *http.Request) {
 // 		session := s.Copy()
@@ -347,7 +348,7 @@ func (places Places) skipPlace(teamID string, id string) error {
 
 // 		if err != nil {
 // 			support.ErrorWithJSON(w, "Database error", http.StatusInternalServerError)
-// 			log.Println("Failed to get all books: ", err)
+// 			log.Println("Failed to get all places: ", err)
 // 			return
 // 		}
 
