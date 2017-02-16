@@ -1,7 +1,14 @@
 import React, { PropTypes } from 'react';
 import { Link } from 'react-router';
 
-function Nav() {
+function Nav({ name, teamName, isFetching, error }) {
+  let userBlock;
+  if (!isFetching && !error) {
+    userBlock = (<span className="nav-link">
+      { name } ({teamName})
+    </span>);
+  }
+
   return (
     <nav className="navbar navbar-toggleable-md navbar-inverse fixed-top bg-inverse">
       <button
@@ -24,6 +31,11 @@ function Nav() {
               Places <span className="sr-only">(current)</span>
             </Link>
           </li>
+        </ul>
+        <ul className="navbar-nav ml-auto justify-content-end">
+          <li className="nav-item active">
+            {userBlock}
+          </li>
           <li className="nav-item">
             <a className="nav-link" href="/manage/api/logout">Logout</a>
           </li>
@@ -32,5 +44,16 @@ function Nav() {
     </nav>
   );
 }
+
+Nav.propTypes = {
+  name: PropTypes.string.isRequired,
+  teamName: PropTypes.string.isRequired,
+  isFetching: PropTypes.bool.isRequired,
+  error: PropTypes.oneOf(Error),
+};
+
+Nav.defaultProps = {
+  error: undefined,
+};
 
 export default Nav;

@@ -19,4 +19,8 @@ PlaceDate.propTypes = {
   date: PropTypes.instanceOf(Date),
 };
 
+PlaceDate.defaultProps = {
+  date: undefined,
+};
+
 export default PlaceDate;

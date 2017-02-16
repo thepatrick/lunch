@@ -5,9 +5,9 @@ import PlaceDate from './PlaceDate';
 const Place = ({ editUrl, name, lastVisited, lastSkipped }) => (
   <tr>
     <td>
-      {/*<Link to={editUrl}>*/}
+      <Link to={editUrl}>
         {name}
-      {/*</Link>*/}
+      </Link>
     </td>
     <td>
       <PlaceDate
@@ -34,6 +34,6 @@ Place.propTypes = {
 Place.defaultProps = {
   lastVisited: undefined,
   lastSkipped: undefined,
-}
+};
 
 export default Place;

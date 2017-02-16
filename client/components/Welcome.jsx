@@ -1,6 +1,6 @@
 import React, { PropTypes } from 'react';
 
-const Welcome = ({ name, teamName, isFetching, error }) => {
+const Welcome = ({ teamName, isFetching, error }) => {
   if (isFetching) {
     return (
       <h1>Loading...</h1>
@@ -12,14 +12,18 @@ const Welcome = ({ name, teamName, isFetching, error }) => {
     );
   }
   return (
-    <h1>{name} / {teamName}</h1>
+    <h1>{teamName}&#8217;s Lunch Places</h1>
   );
 };
 
 Welcome.propTypes = {
-  name: PropTypes.string.isRequired,
   teamName: PropTypes.string.isRequired,
   isFetching: PropTypes.bool.isRequired,
+  error: PropTypes.oneOf(Error),
+};
+
+Welcome.defaultProps = {
+  error: undefined,
 };
 
 export default Welcome;

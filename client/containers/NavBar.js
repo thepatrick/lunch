@@ -1,16 +1,18 @@
 import { connect } from 'react-redux';
-import Welcome from '../components/Welcome';
+import Nav from '../components/Nav';
 
 const mapStateToProps = state => (
   {
+    // active: ownProps.filter === state.visibilityFilter,
+    name: state.user.name,
     teamName: state.user.teamName,
     isFetching: state.user.isFetching,
     error: state.user.error,
   }
 );
 
-const UserWelcome = connect(
+const NavBar = connect(
   mapStateToProps,
-)(Welcome);
+)(Nav);
 
-export default UserWelcome;
+export default NavBar;

@@ -1,15 +1,17 @@
 import React, { PropTypes } from 'react';
-import Nav from './Nav';
+import NavBar from '../containers/NavBar';
 
 const App = ({ userFetching, userError, children }) => {
   if (userFetching) {
-    return <div>Loading...</div>;
+    return (<div>
+      <NavBar />
+    </div>);
   }
   if (userError) {
     return <div>{userError.message}</div>;
   }
   return (<div>
-    <Nav />
+    <NavBar />
 
     <div className="container-fluid">
       {children}

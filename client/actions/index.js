@@ -34,14 +34,13 @@ export const fetchCurrentUser = () => (
           error.response = response;
           throw error;
         }
-        console.log('user json', response, json);
+        // ('user json', response, json);
         return json;
       })
       .then(json => (
         dispatch(fetchUserSuccess(json))
       ))
       .catch((err) => {
-        console.log('err', err.response);
         if (err.response && err.response.status === 401) {
           window.location = `/manage/api/login?back=${encodeURIComponent(window.location)}`;
         }
@@ -85,5 +84,52 @@ export const fetchAllPlaces = () => (
       .catch(err => (
         dispatch(fetchPlacesFailure(err))
       ));
+  }
+);
+
+const savePlace = id => (
+  {
+    type: 'SAVE_PLACE',
+    id,
+  }
+);
+
+const savePlaceSuccess = (id, placeName) => (
+  {
+    type: 'SAVE_PLACE_SUCCESS',
+    id,
+    placeName,
+  }
+);
+
+const savePlaceFailure = (id, error) => (
+  {
+    type: 'SAVE_PLACE_FAILURE',
+    id,
+    error,
+  }
+);
+
+export const updatePlaceName = (placeId, placeName) => (
+  (dispatch) => {
+    dispatch(savePlace(placeId));
+
+    return fetch(`/manage/api/places/${placeId}`, {
+      credentials: 'include',
+      method: 'POST',
+      body: JSON.stringify({
+        name: placeName,
+      }),
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(response.statusText);
+        }
+        return response;
+      })
+      .then((/* response */) => (
+        dispatch(savePlaceSuccess(placeId, placeName))
+      ))
+      .catch(err => dispatch(savePlaceFailure(placeId, err)));
   }
 );
