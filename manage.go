@@ -147,7 +147,45 @@ func managePlacesAll(config LunchConfig, places *Places) http.HandlerFunc {
 
 		support.ResponseWithJSON(w, respBody, http.StatusOK)
 	}
+}
 
+type handlerFuncWithSession func(w http.ResponseWriter, r *http.Request, session validSession)
+
+type validSession struct {
+	session *sessions.Session
+	api     *slack.Client
+	user    *slack.UserIdentityResponse
+}
+
+func withValidSession(ok handlerFuncWithSession) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		session, err := store.Get(r, "places-session")
+
+		if err != nil {
+			log.Printf("Failed to create session: %v\n", err)
+			support.ErrorWithJSON(w, "Failed to create session", http.StatusInternalServerError)
+			return
+		}
+
+		if session.Values["access_token"] == nil || session.Values["team_id"] == nil {
+			support.ErrorWithJSON(w, "Failed to get user identity", http.StatusUnauthorized)
+			return
+		}
+
+		accessToken := session.Values["access_token"].(string)
+
+		api := slack.New(accessToken)
+		api.SetDebug(true)
+
+		user, err := api.GetUserIdentity()
+		if err != nil {
+			log.Printf("Failed to get user identity: %v\n", err)
+			support.ErrorWithJSON(w, "Failed to get user identity", http.StatusUnauthorized)
+			return
+		}
+
+		ok(w, r, validSession{session, api, user})
+	}
 }
 
 func manageWhoami(config LunchConfig) http.HandlerFunc {
@@ -188,12 +226,49 @@ func manageWhoami(config LunchConfig) http.HandlerFunc {
 	}
 }
 
+func manageUpdatePlace(config LunchConfig, places *Places) http.HandlerFunc {
+	return withValidSession(func(w http.ResponseWriter, r *http.Request, session validSession) {
+		id := pat.Param(r, "id")
+
+		updateBody := struct {
+			Name string `json:"name"`
+		}{""}
+
+		decoder := json.NewDecoder(r.Body)
+		err := decoder.Decode(&updateBody)
+		if err != nil {
+			support.ErrorWithJSON(w, "Incorrect body", http.StatusBadRequest)
+			return
+		}
+
+		if updateBody.Name == "" {
+			support.ErrorWithJSON(w, "Incorrect body", http.StatusBadRequest)
+			return
+		}
+
+		err = places.updatePlace(session.user.Team.ID, id, updateBody)
+		if err != nil {
+			statusCode := http.StatusBadRequest
+			if err.Error() == "A place with that name already exists" {
+				statusCode = http.StatusConflict
+			}
+			if err.Error() == "Place not found" {
+				statusCode = http.StatusNotFound
+			}
+			support.ErrorWithJSON(w, err.Error(), statusCode)
+		}
+
+		w.WriteHeader(http.StatusNoContent)
+	})
+}
+
 func newManageMux(root string, config LunchConfig, places *Places) *goji.Mux {
 	mux := goji.SubMux()
 
 	mux.HandleFunc(pat.Get("/logout"), manageLogout(root))
 	mux.HandleFunc(pat.Get("/redirect"), manageSlackRedirect(root, config))
 	mux.HandleFunc(pat.Get("/whoami"), manageWhoami(config))
+	mux.HandleFunc(pat.Post("/places/:id"), manageUpdatePlace(config, places))
 	mux.HandleFunc(pat.Get("/places"), managePlacesAll(config, places))
 	mux.HandleFunc(pat.Get("/login"), manageLogin(root, config))
 
