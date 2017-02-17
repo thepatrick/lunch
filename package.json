@@ -21,7 +21,7 @@
     "url": "https://github.com/thepatrick/lunch/issues"
   },
   "homepage": "https://github.com/thepatrick/lunch#readme",
-  "devDependencies": {
+  "dependencies": {
     "babel-cli": "^6.18.0",
     "babel-core": "^6.21.0",
     "babel-loader": "^6.2.10",
@@ -63,6 +63,5 @@
     "webpack-subresource-integrity": "^0.8.2",
     "webpack-uglify-js-plugin": "^1.1.9",
     "whatwg-fetch": "^2.0.1"
-  },
-  "dependencies": {}
+  }
 }
