@@ -312,51 +312,23 @@ func (places Places) skipPlace(teamID string, id string) error {
 	return nil
 }
 
-// func deletePlace(s *mgo.Session) http.HandlerFunc {
-// 	return func(w http.ResponseWriter, r *http.Request) {
-// 		session := s.Copy()
-// 		defer session.Close()
+func (places Places) deletePlace(teamID string, id string) error {
+	session := places.Session.Copy()
+	defer session.Close()
 
-// 		id := pat.Param(r, "id")
+	c := session.DB(places.DatabaseName).C("places")
 
-// 		c := session.DB("lunch").C("places")
+	query := bson.M{"teamid": teamID, "_id": bson.ObjectIdHex(id)}
+	err := c.Remove(query)
+	if err != nil {
+		switch err {
+		case mgo.ErrNotFound:
+			return fmt.Errorf("Place not found")
+		default:
+			log.Println("Failed to delete place: ", err)
+			return fmt.Errorf("Database error")
+		}
+	}
 
-// 		query := bson.M{"_id": bson.ObjectIdHex(id)}
-// 		log.Println("Looking for ", query)
-// 		err := c.Remove(query)
-// 		if err != nil {
-// 			switch err {
-// 			case mgo.ErrNotFound:
-// 				support.ErrorWithJSON(w, "Place not found", http.StatusNotFound)
-// 				return
-// 			default:
-// 				support.ErrorWithJSON(w, "Database error", http.StatusInternalServerError)
-// 				log.Println("Failed to delete place: ", err)
-// 				return
-// 			}
-// 		}
-
-// 		w.WriteHeader(http.StatusNoContent)
-// 	}
-// }
-
-// HTTP API functions
-
-// func allPlacesHTTP(s *mgo.Session) http.HandlerFunc {
-// 	return func(w http.ResponseWriter, r *http.Request) {
-// 		places, err := allPlaces(s)
-
-// 		if err != nil {
-// 			support.ErrorWithJSON(w, "Database error", http.StatusInternalServerError)
-// 			log.Println("Failed to get all places: ", err)
-// 			return
-// 		}
-
-// 		respBody, err := json.MarshalIndent(places, "", "  ")
-// 		if err != nil {
-// 			log.Fatal(err)
-// 		}
-
-// 		support.ResponseWithJSON(w, respBody, http.StatusOK)
-// 	}
-// }
+	return nil
+}
