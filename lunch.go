@@ -18,16 +18,6 @@ import (
 
 var store sessions.Store
 
-// LunchConfig encapsulate all of the config needed to run this Slack App
-type LunchConfig struct {
-	ClientID     string
-	ClientSecret string
-	MongoURL     string
-	DatabaseName string
-	Hostname     string
-	Port         int
-}
-
 func main() {
 	fmt.Printf("Let's get lunch!\n")
 
@@ -36,7 +26,7 @@ func main() {
 		panic(fmt.Errorf("Invalid port: %v", err))
 	}
 
-	config := LunchConfig{
+	config := model.LunchConfig{
 		ClientID:     os.Getenv("LUNCH_CLIENT_ID"),
 		ClientSecret: os.Getenv("LUNCH_CLIENT_SECRET"),
 		MongoURL:     os.Getenv("LUNCH_MONGO_URL"),
@@ -60,6 +50,7 @@ func main() {
 	mux := goji.NewMux()
 
 	mux.Handle(pat.New("/slack/*"), newSlackMux(config, places))
+
 	mux.Handle(pat.New("/install/*"), newInstallMux(config))
 	mux.Handle(pat.New("/install"), simpleRedirect("/install/"))
 

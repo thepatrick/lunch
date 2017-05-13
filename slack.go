@@ -97,7 +97,7 @@ type slackTeam struct {
 // 	Name string `json:"name"`
 // }
 
-func newSlackMux(config LunchConfig, places *model.Places) *goji.Mux {
+func newSlackMux(config model.LunchConfig, places *model.Places) *goji.Mux {
 	mux := goji.SubMux()
 
 	mux.Handle(pat.New("/action"), handleSlackAction(config, places))
@@ -107,7 +107,7 @@ func newSlackMux(config LunchConfig, places *model.Places) *goji.Mux {
 	return mux
 }
 
-func handleSlackAction(config LunchConfig, places *model.Places) http.HandlerFunc {
+func handleSlackAction(config model.LunchConfig, places *model.Places) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		err := r.ParseForm()
 		if err != nil {
@@ -152,7 +152,7 @@ func handleSlackAction(config LunchConfig, places *model.Places) http.HandlerFun
 	}
 }
 
-func handleSlack(config LunchConfig, places *model.Places) http.HandlerFunc {
+func handleSlack(config model.LunchConfig, places *model.Places) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		err := r.ParseForm()
 		if err != nil {
@@ -271,7 +271,7 @@ func slackOKPlace(teamID string, placeID string, places *model.Places) SlackResp
 	return SlackResponse{"in_channel", message, []SlackAttachment{}}
 }
 
-func slackListPlaces(config LunchConfig, command SlackCommand, places *model.Places) SlackResponse {
+func slackListPlaces(config model.LunchConfig, command SlackCommand, places *model.Places) SlackResponse {
 	listURL := config.Hostname + "/places"
 	return SlackResponse{"ephemeral", "To see the list of places go to " + listURL, []SlackAttachment{}}
 }

@@ -13,10 +13,11 @@ import (
 	"github.com/parnurzeal/gorequest"
 
 	"github.com/gorilla/sessions"
+	"github.com/thepatrick/lunch/model"
 	"github.com/thepatrick/lunch/support"
 )
 
-func addToSlackPage(w http.ResponseWriter, config LunchConfig) {
+func addToSlackPage(w http.ResponseWriter, config model.LunchConfig) {
 
 	urlData := struct {
 		Scope    string `url:"scope"`
@@ -72,7 +73,7 @@ func loggedinUserPage(w http.ResponseWriter, session *sessions.Session) {
 	return
 }
 
-func installHomepage(config LunchConfig) http.HandlerFunc {
+func installHomepage(config model.LunchConfig) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Get a session. We're ignoring the error resulted from decoding an
 		// existing session: Get() always returns a session, even if empty.
@@ -118,7 +119,7 @@ type oauthSuccess struct {
 	TeamID      string `json:"team_id"`
 }
 
-func slackRedirect(config LunchConfig) http.HandlerFunc {
+func slackRedirect(config model.LunchConfig) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Get a session. We're ignoring the error resulted from decoding an
 		// existing session: Get() always returns a session, even if empty.
@@ -190,7 +191,7 @@ func slackRedirect(config LunchConfig) http.HandlerFunc {
 	}
 }
 
-func newInstallMux(config LunchConfig) *goji.Mux {
+func newInstallMux(config model.LunchConfig) *goji.Mux {
 	mux := goji.SubMux()
 
 	mux.HandleFunc(pat.Get("/redirect"), slackRedirect(config))

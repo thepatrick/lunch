@@ -17,7 +17,7 @@ import (
 	"github.com/thepatrick/lunch/support"
 )
 
-func slackAuthorizeURL(config LunchConfig, scope string, redirect string) string {
+func slackAuthorizeURL(config model.LunchConfig, scope string, redirect string) string {
 	urlData := struct {
 		Scope    string `url:"scope"`
 		ClientID string `url:"client_id"`
@@ -49,7 +49,7 @@ func manageLogout(root string) http.HandlerFunc {
 	}
 }
 
-func manageSlackRedirect(root string, config LunchConfig) http.HandlerFunc {
+func manageSlackRedirect(root string, config model.LunchConfig) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Get a session. We're ignoring the error resulted from decoding an
 		// existing session: Get() always returns a session, even if empty.
@@ -94,7 +94,7 @@ func manageFailed(root string, w http.ResponseWriter) {
 	support.Render(w, "500.html", data)
 }
 
-func manageLogin(root string, config LunchConfig) http.HandlerFunc {
+func manageLogin(root string, config model.LunchConfig) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// session.Values["back"] = r.URL.Query().Get("back")
 		// session.Save(r, w)
@@ -104,7 +104,7 @@ func manageLogin(root string, config LunchConfig) http.HandlerFunc {
 	}
 }
 
-func managePlacesAll(config LunchConfig, places *model.Places) http.HandlerFunc {
+func managePlacesAll(config model.LunchConfig, places *model.Places) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		session, err := store.Get(r, "places-session")
 		if err != nil {
@@ -189,7 +189,7 @@ func withValidSession(ok handlerFuncWithSession) http.HandlerFunc {
 	}
 }
 
-func manageWhoami(config LunchConfig) http.HandlerFunc {
+func manageWhoami(config model.LunchConfig) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		session, err := store.Get(r, "places-session")
 		if err != nil {
@@ -227,7 +227,7 @@ func manageWhoami(config LunchConfig) http.HandlerFunc {
 	}
 }
 
-func manageUpdatePlace(config LunchConfig, places *model.Places) http.HandlerFunc {
+func manageUpdatePlace(config model.LunchConfig, places *model.Places) http.HandlerFunc {
 	return withValidSession(func(w http.ResponseWriter, r *http.Request, session validSession) {
 		id := pat.Param(r, "id")
 
@@ -266,7 +266,7 @@ func manageUpdatePlace(config LunchConfig, places *model.Places) http.HandlerFun
 
 type ManageAPI struct {
 	root   string
-	config LunchConfig
+	config model.LunchConfig
 	places *model.Places
 }
 
@@ -288,7 +288,7 @@ func (manage ManageAPI) deletePlace() http.HandlerFunc {
 	})
 }
 
-func newManageMux(root string, config LunchConfig, places *model.Places) *goji.Mux {
+func newManageMux(root string, config model.LunchConfig, places *model.Places) *goji.Mux {
 	mux := goji.SubMux()
 
 	manage := ManageAPI{root, config, places}
