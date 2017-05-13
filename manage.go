@@ -256,6 +256,31 @@ func manageUpdatePlace(config LunchConfig, places *Places) http.HandlerFunc {
 				statusCode = http.StatusNotFound
 			}
 			support.ErrorWithJSON(w, err.Error(), statusCode)
+			return
+		}
+
+		w.WriteHeader(http.StatusNoContent)
+	})
+}
+
+type ManageAPI struct {
+	root   string
+	config LunchConfig
+	places *Places
+}
+
+func (manage ManageAPI) deletePlace() http.HandlerFunc {
+	return withValidSession(func(w http.ResponseWriter, r *http.Request, session validSession) {
+		id := pat.Param(r, "id")
+
+		err := manage.places.deletePlace(session.user.Team.ID, id)
+		if err != nil {
+			statusCode := http.StatusBadRequest
+			if err.Error() == "Place not found" {
+				statusCode = http.StatusNotFound
+			}
+			support.ErrorWithJSON(w, err.Error(), statusCode)
+			return
 		}
 
 		w.WriteHeader(http.StatusNoContent)
@@ -265,12 +290,16 @@ func manageUpdatePlace(config LunchConfig, places *Places) http.HandlerFunc {
 func newManageMux(root string, config LunchConfig, places *Places) *goji.Mux {
 	mux := goji.SubMux()
 
+	manage := ManageAPI{root, config, places}
+
 	mux.HandleFunc(pat.Get("/logout"), manageLogout(root))
 	mux.HandleFunc(pat.Get("/redirect"), manageSlackRedirect(root, config))
 	mux.HandleFunc(pat.Get("/whoami"), manageWhoami(config))
 	mux.HandleFunc(pat.Post("/places/:id"), manageUpdatePlace(config, places))
 	mux.HandleFunc(pat.Get("/places"), managePlacesAll(config, places))
 	mux.HandleFunc(pat.Get("/login"), manageLogin(root, config))
+
+	mux.HandleFunc(pat.Delete("/places/:id"), manage.deletePlace())
 
 	mux.Use(support.Logging)
 	return mux
