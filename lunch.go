@@ -10,13 +10,14 @@ import (
 	"strconv"
 
 	"github.com/gorilla/sessions"
+	"github.com/thepatrick/lunch/apps/install"
 	"github.com/thepatrick/lunch/model"
 	"github.com/thepatrick/lunch/support"
 	"goji.io"
 	"goji.io/pat"
 )
 
-var store sessions.Store
+var store *sessions.CookieStore
 
 func main() {
 	fmt.Printf("Let's get lunch!\n")
@@ -51,7 +52,9 @@ func main() {
 
 	mux.Handle(pat.New("/slack/*"), newSlackMux(config, places))
 
-	mux.Handle(pat.New("/install/*"), newInstallMux(config))
+	installApp := install.NewInstallApp(config, store)
+
+	mux.Handle(pat.New("/install/*"), installApp.NewMux())
 	mux.Handle(pat.New("/install"), simpleRedirect("/install/"))
 
 	mux.Handle(pat.New("/manage/api/*"), newManageMux("/manage/", config, places))
