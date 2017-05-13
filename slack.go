@@ -11,6 +11,7 @@ import (
 
 	"github.com/goji/param"
 
+	"github.com/thepatrick/lunch/model"
 	"github.com/thepatrick/lunch/support"
 )
 
@@ -96,7 +97,7 @@ type slackTeam struct {
 // 	Name string `json:"name"`
 // }
 
-func newSlackMux(config LunchConfig, places *Places) *goji.Mux {
+func newSlackMux(config LunchConfig, places *model.Places) *goji.Mux {
 	mux := goji.SubMux()
 
 	mux.Handle(pat.New("/action"), handleSlackAction(config, places))
@@ -106,7 +107,7 @@ func newSlackMux(config LunchConfig, places *Places) *goji.Mux {
 	return mux
 }
 
-func handleSlackAction(config LunchConfig, places *Places) http.HandlerFunc {
+func handleSlackAction(config LunchConfig, places *model.Places) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		err := r.ParseForm()
 		if err != nil {
@@ -151,7 +152,7 @@ func handleSlackAction(config LunchConfig, places *Places) http.HandlerFunc {
 	}
 }
 
-func handleSlack(config LunchConfig, places *Places) http.HandlerFunc {
+func handleSlack(config LunchConfig, places *model.Places) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		err := r.ParseForm()
 		if err != nil {
@@ -208,7 +209,7 @@ func slackGetHelp(command SlackCommand) SlackResponse {
 	return SlackResponse{"in_channel", message, attachments}
 }
 
-func slackAttachmentForPlace(place Place) SlackAttachment {
+func slackAttachmentForPlace(place model.Place) SlackAttachment {
 	lunchURL := place.ID.Hex()
 
 	log.Println("lunchURL", lunchURL)
@@ -229,8 +230,8 @@ func slackAttachmentForPlace(place Place) SlackAttachment {
 	return attachment
 }
 
-func slackSuggestPlace(command SlackCommand, places *Places) SlackResponse {
-	place, err := places.proposePlace(command.TeamID)
+func slackSuggestPlace(command SlackCommand, places *model.Places) SlackResponse {
+	place, err := places.ProposePlace(command.TeamID)
 	if err != nil {
 		return slackErrorResponse(err.Error() + " Maybe try adding one using `" + command.Command + " add Awesome Place`")
 	}
@@ -241,14 +242,14 @@ func slackSuggestPlace(command SlackCommand, places *Places) SlackResponse {
 	return SlackResponse{"in_channel", message, attachments}
 }
 
-func slackSkipPlace(teamID string, placeID string, places *Places) SlackResponse {
-	err := places.skipPlace(teamID, placeID)
+func slackSkipPlace(teamID string, placeID string, places *model.Places) SlackResponse {
+	err := places.SkipPlace(teamID, placeID)
 
 	if err != nil {
 		return slackErrorResponse(err.Error())
 	}
 
-	place, err := places.proposePlace(teamID)
+	place, err := places.ProposePlace(teamID)
 	if err != nil {
 		return slackErrorResponse(err.Error())
 	}
@@ -259,8 +260,8 @@ func slackSkipPlace(teamID string, placeID string, places *Places) SlackResponse
 	return SlackResponse{"in_channel", message, attachments}
 }
 
-func slackOKPlace(teamID string, placeID string, places *Places) SlackResponse {
-	place, err := places.visitPlace(teamID, placeID)
+func slackOKPlace(teamID string, placeID string, places *model.Places) SlackResponse {
+	place, err := places.VisitPlace(teamID, placeID)
 
 	if err != nil {
 		return slackErrorResponse(err.Error())
@@ -270,33 +271,23 @@ func slackOKPlace(teamID string, placeID string, places *Places) SlackResponse {
 	return SlackResponse{"in_channel", message, []SlackAttachment{}}
 }
 
-func slackListPlaces(config LunchConfig, command SlackCommand, places *Places) SlackResponse {
-	// places, err := allPlaces(s)
-	// if err != nil {
-	// 	return slackErrorResponse(err.Error())
-	// }
-
-	// if len(places) == 0 {
-	// 	return slackErrorResponse("No places yet, try `/" + command.Command + " add Place Name` to add your first one!")
-	// }
-
+func slackListPlaces(config LunchConfig, command SlackCommand, places *model.Places) SlackResponse {
 	listURL := config.Hostname + "/places"
-
 	return SlackResponse{"ephemeral", "To see the list of places go to " + listURL, []SlackAttachment{}}
 }
 
-func slackAddPlace(command SlackCommand, words []string, places *Places) SlackResponse {
+func slackAddPlace(command SlackCommand, words []string, places *model.Places) SlackResponse {
 	if len(words) == 0 {
 		return slackErrorResponse("You forgot the place name!")
 	}
 
 	placeName := strings.Join(words, " ")
 
-	var place Place
+	var place model.Place
 	place.Name = placeName
 	place.TeamID = command.TeamID
 
-	_, err := places.addPlace(place)
+	_, err := places.AddPlace(place)
 
 	if err != nil {
 		return slackErrorResponse(err.Error())

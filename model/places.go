@@ -1,7 +1,6 @@
-package main
+package model
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"math/rand"
@@ -11,44 +10,14 @@ import (
 	"gopkg.in/mgo.v2/bson"
 )
 
-// Place is a "Place" to have lunch
-type Place struct {
-	ID          bson.ObjectId `bson:"_id,omitempty" json:"id"`
-	TeamID      string        `json:"team_id"`
-	Name        string        `json:"name"`
-	LastVisited time.Time     `json:"last_visited"`
-	LastSkipped time.Time     `json:"last_skipped"`
-}
-
-// MarshalJSON Convert place to JSON document
-func (place *Place) MarshalJSON() ([]byte, error) {
-	var lastVisited string
-	if !place.LastVisited.IsZero() {
-		lastVisited = place.LastVisited.Format(time.RFC3339Nano)
-	}
-	var lastSkipped string
-	if !place.LastSkipped.IsZero() {
-		lastSkipped = place.LastSkipped.Format(time.RFC3339Nano)
-	}
-	type Alias Place
-	return json.Marshal(&struct {
-		*Alias
-		LastVisited string `json:"last_visited,omitempty"`
-		LastSkipped string `json:"last_skipped,omitempty"`
-	}{
-		Alias:       (*Alias)(place),
-		LastVisited: lastVisited,
-		LastSkipped: lastSkipped,
-	})
-}
-
 // Places are where you go to lunch
 type Places struct {
 	Session      *mgo.Session
 	DatabaseName string
 }
 
-func newPlaces(session *mgo.Session, databaseName string) *Places {
+// NewPlaces creates a Places struct
+func NewPlaces(session *mgo.Session, databaseName string) *Places {
 	places := &Places{
 		Session:      session,
 		DatabaseName: databaseName,
@@ -91,7 +60,8 @@ func (places Places) ensurePlacesIndex() {
 	}
 }
 
-func (places Places) allPlaces(teamID string) ([]Place, error) {
+// AllPlaces returns all places for this team
+func (places Places) AllPlaces(teamID string) ([]Place, error) {
 	session := places.Session.Copy()
 	defer session.Close()
 
@@ -143,7 +113,8 @@ func sortProposablePlaces(vs []Place) []Place {
 	return vs
 }
 
-func (places Places) proposePlace(teamID string) (Place, error) {
+// ProposePlace picks a place to go to for lunch based on a proprietary algorithm (basically randomness)
+func (places Places) ProposePlace(teamID string) (Place, error) {
 	session := places.Session.Copy()
 	defer session.Close()
 
@@ -170,7 +141,8 @@ func (places Places) proposePlace(teamID string) (Place, error) {
 	return allPlaces[0], nil
 }
 
-func (places Places) addPlace(place Place) (string, error) {
+// AddPlace adds a new place
+func (places Places) AddPlace(place Place) (string, error) {
 	session := places.Session.Copy()
 	defer session.Close()
 
@@ -220,7 +192,8 @@ func (places Places) addPlace(place Place) (string, error) {
 // 	}
 // }
 
-func (places Places) updatePlace(teamID string, id string, updates interface{}) error {
+// UpdatePlace updates a given place in the database
+func (places Places) UpdatePlace(teamID string, id string, updates interface{}) error {
 	session := places.Session.Copy()
 	defer session.Close()
 
@@ -248,7 +221,8 @@ func (places Places) updatePlace(teamID string, id string, updates interface{}) 
 	return nil
 }
 
-func (places Places) visitPlace(teamID string, id string) (Place, error) {
+// VisitPlace updates the database to record that user has accepted our lunch suggestion.
+func (places Places) VisitPlace(teamID string, id string) (Place, error) {
 	session := places.Session.Copy()
 	defer session.Close()
 
@@ -280,7 +254,8 @@ func (places Places) visitPlace(teamID string, id string) (Place, error) {
 	return place, nil
 }
 
-func (places Places) skipPlace(teamID string, id string) error {
+// SkipPlace records that the a user has decided the algorithm is wrong and that this is not the place to go to today.
+func (places Places) SkipPlace(teamID string, id string) error {
 	session := places.Session.Copy()
 	defer session.Close()
 
@@ -312,7 +287,8 @@ func (places Places) skipPlace(teamID string, id string) error {
 	return nil
 }
 
-func (places Places) deletePlace(teamID string, id string) error {
+// DeletePlace removes a single place from the database
+func (places Places) DeletePlace(teamID string, id string) error {
 	session := places.Session.Copy()
 	defer session.Close()
 

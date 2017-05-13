@@ -10,6 +10,7 @@ import (
 	"strconv"
 
 	"github.com/gorilla/sessions"
+	"github.com/thepatrick/lunch/model"
 	"github.com/thepatrick/lunch/support"
 	"goji.io"
 	"goji.io/pat"
@@ -54,7 +55,7 @@ func main() {
 
 	// session.SetMode(mgo.Monotonic, true)
 
-	places := newPlaces(session, config.DatabaseName)
+	places := model.NewPlaces(session, config.DatabaseName)
 
 	mux := goji.NewMux()
 

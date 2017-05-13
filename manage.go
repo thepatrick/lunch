@@ -13,6 +13,7 @@ import (
 	"github.com/nlopes/slack"
 
 	"github.com/gorilla/sessions"
+	"github.com/thepatrick/lunch/model"
 	"github.com/thepatrick/lunch/support"
 )
 
@@ -103,7 +104,7 @@ func manageLogin(root string, config LunchConfig) http.HandlerFunc {
 	}
 }
 
-func managePlacesAll(config LunchConfig, places *Places) http.HandlerFunc {
+func managePlacesAll(config LunchConfig, places *model.Places) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		session, err := store.Get(r, "places-session")
 		if err != nil {
@@ -131,7 +132,7 @@ func managePlacesAll(config LunchConfig, places *Places) http.HandlerFunc {
 			return
 		}
 
-		allPlaces, err := places.allPlaces(user.Team.ID)
+		allPlaces, err := places.AllPlaces(user.Team.ID)
 		if err != nil {
 			log.Printf("Failed to get all places: %v\n", err)
 			support.ErrorWithJSON(w, "Failed to get places", http.StatusInternalServerError)
@@ -226,7 +227,7 @@ func manageWhoami(config LunchConfig) http.HandlerFunc {
 	}
 }
 
-func manageUpdatePlace(config LunchConfig, places *Places) http.HandlerFunc {
+func manageUpdatePlace(config LunchConfig, places *model.Places) http.HandlerFunc {
 	return withValidSession(func(w http.ResponseWriter, r *http.Request, session validSession) {
 		id := pat.Param(r, "id")
 
@@ -246,7 +247,7 @@ func manageUpdatePlace(config LunchConfig, places *Places) http.HandlerFunc {
 			return
 		}
 
-		err = places.updatePlace(session.user.Team.ID, id, updateBody)
+		err = places.UpdatePlace(session.user.Team.ID, id, updateBody)
 		if err != nil {
 			statusCode := http.StatusBadRequest
 			if err.Error() == "A place with that name already exists" {
@@ -266,14 +267,14 @@ func manageUpdatePlace(config LunchConfig, places *Places) http.HandlerFunc {
 type ManageAPI struct {
 	root   string
 	config LunchConfig
-	places *Places
+	places *model.Places
 }
 
 func (manage ManageAPI) deletePlace() http.HandlerFunc {
 	return withValidSession(func(w http.ResponseWriter, r *http.Request, session validSession) {
 		id := pat.Param(r, "id")
 
-		err := manage.places.deletePlace(session.user.Team.ID, id)
+		err := manage.places.DeletePlace(session.user.Team.ID, id)
 		if err != nil {
 			statusCode := http.StatusBadRequest
 			if err.Error() == "Place not found" {
@@ -287,7 +288,7 @@ func (manage ManageAPI) deletePlace() http.HandlerFunc {
 	})
 }
 
-func newManageMux(root string, config LunchConfig, places *Places) *goji.Mux {
+func newManageMux(root string, config LunchConfig, places *model.Places) *goji.Mux {
 	mux := goji.SubMux()
 
 	manage := ManageAPI{root, config, places}
