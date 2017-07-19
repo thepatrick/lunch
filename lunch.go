@@ -11,6 +11,7 @@ import (
 
 	"github.com/gorilla/sessions"
 	"github.com/thepatrick/lunch/apps/install"
+	"github.com/thepatrick/lunch/apps/manage"
 	"github.com/thepatrick/lunch/model"
 	"github.com/thepatrick/lunch/support"
 	"goji.io"
@@ -53,11 +54,11 @@ func main() {
 	mux.Handle(pat.New("/slack/*"), newSlackMux(config, places))
 
 	installApp := install.NewInstallApp(config, store)
-
 	mux.Handle(pat.New("/install/*"), installApp.NewMux())
 	mux.Handle(pat.New("/install"), simpleRedirect("/install/"))
 
-	mux.Handle(pat.New("/manage/api/*"), newManageMux("/manage/", config, places))
+	manageApp := manage.NewApp("/manage/", config, places, store)
+	mux.Handle(pat.New("/manage/api/*"), manageApp.NewMux())
 
 	mux.Handle(pat.New("/places/*"), simpleRedirect("/manage/"))
 	mux.Handle(pat.New("/places"), simpleRedirect("/manage/"))
