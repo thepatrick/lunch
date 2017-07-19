@@ -10,22 +10,16 @@ import (
 	"strconv"
 
 	"github.com/gorilla/sessions"
+	"github.com/thepatrick/lunch/apps/install"
+	"github.com/thepatrick/lunch/apps/manage"
+	"github.com/thepatrick/lunch/apps/slackbot"
+	"github.com/thepatrick/lunch/model"
 	"github.com/thepatrick/lunch/support"
 	"goji.io"
 	"goji.io/pat"
 )
 
-var store sessions.Store
-
-// LunchConfig encapsulate all of the config needed to run this Slack App
-type LunchConfig struct {
-	ClientID     string
-	ClientSecret string
-	MongoURL     string
-	DatabaseName string
-	Hostname     string
-	Port         int
-}
+var store *sessions.CookieStore
 
 func main() {
 	fmt.Printf("Let's get lunch!\n")
@@ -35,7 +29,7 @@ func main() {
 		panic(fmt.Errorf("Invalid port: %v", err))
 	}
 
-	config := LunchConfig{
+	config := model.LunchConfig{
 		ClientID:     os.Getenv("LUNCH_CLIENT_ID"),
 		ClientSecret: os.Getenv("LUNCH_CLIENT_SECRET"),
 		MongoURL:     os.Getenv("LUNCH_MONGO_URL"),
@@ -54,15 +48,19 @@ func main() {
 
 	// session.SetMode(mgo.Monotonic, true)
 
-	places := newPlaces(session, config.DatabaseName)
+	places := model.NewPlaces(session, config.DatabaseName)
 
 	mux := goji.NewMux()
 
-	mux.Handle(pat.New("/slack/*"), newSlackMux(config, places))
-	mux.Handle(pat.New("/install/*"), newInstallMux(config))
+	slackbotApp := slackbot.NewApp(config, places, store)
+	mux.Handle(pat.New("/slack/*"), slackbotApp.NewMux())
+
+	installApp := install.NewInstallApp(config, store)
+	mux.Handle(pat.New("/install/*"), installApp.NewMux())
 	mux.Handle(pat.New("/install"), simpleRedirect("/install/"))
 
-	mux.Handle(pat.New("/manage/api/*"), newManageMux("/manage/", config, places))
+	manageApp := manage.NewApp("/manage/", config, places, store)
+	mux.Handle(pat.New("/manage/api/*"), manageApp.NewMux())
 
 	mux.Handle(pat.New("/places/*"), simpleRedirect("/manage/"))
 	mux.Handle(pat.New("/places"), simpleRedirect("/manage/"))
