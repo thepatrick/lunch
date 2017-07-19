@@ -4,7 +4,7 @@
   "description": "A simple go app for choosing lunch venues",
   "main": "index.js",
   "engines": {
-    "node": "6.9.1"
+    "node": "8.1.4"
   },
   "scripts": {
     "test": "eslint --ext .jsx --ext .js client",
