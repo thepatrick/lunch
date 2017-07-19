@@ -12,6 +12,7 @@ import (
 	"github.com/gorilla/sessions"
 	"github.com/thepatrick/lunch/apps/install"
 	"github.com/thepatrick/lunch/apps/manage"
+	"github.com/thepatrick/lunch/apps/slackbot"
 	"github.com/thepatrick/lunch/model"
 	"github.com/thepatrick/lunch/support"
 	"goji.io"
@@ -51,7 +52,8 @@ func main() {
 
 	mux := goji.NewMux()
 
-	mux.Handle(pat.New("/slack/*"), newSlackMux(config, places))
+	slackbotApp := slackbot.NewApp(config, places, store)
+	mux.Handle(pat.New("/slack/*"), slackbotApp.NewMux())
 
 	installApp := install.NewInstallApp(config, store)
 	mux.Handle(pat.New("/install/*"), installApp.NewMux())
