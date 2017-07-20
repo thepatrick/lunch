@@ -1,15 +1,9 @@
 package slackbot
 
-import (
-	"log"
-
-	"github.com/thepatrick/lunch/model"
-)
+import "github.com/thepatrick/lunch/model"
 
 func attachmentForPlace(place model.Place) SlackAttachment {
-	lunchURL := place.ID.Hex()
-
-	log.Println("lunchURL", lunchURL)
+	// lunchURL := place.ID.Hex()
 
 	attachment := SlackAttachment{Title: "", Text: ""}
 	attachment.MarkdownIn = []string{"text"}
@@ -20,9 +14,10 @@ func attachmentForPlace(place model.Place) SlackAttachment {
 	attachment.AttachmentType = "default"
 
 	okAction := SlackAttachmentAction{Name: "ok", Style: "primary", Text: "Sounds good", Type: "button", Value: "ok"}
-	skipAction := SlackAttachmentAction{Name: "skip", Text: "Not today", Type: "button", Value: "skip"}
+	skipAction := SlackAttachmentAction{Name: "skip", Style: "danger", Text: "Not today", Type: "button", Value: "skip"}
+	cancelAction := SlackAttachmentAction{Name: "cancel", Text: "Cancel", Type: "button", Value: "cancel"}
 
-	attachment.Actions = []SlackAttachmentAction{okAction, skipAction}
+	attachment.Actions = []SlackAttachmentAction{okAction, skipAction, cancelAction}
 
 	return attachment
 }

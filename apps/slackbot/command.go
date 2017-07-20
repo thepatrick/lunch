@@ -59,7 +59,7 @@ func (app App) suggestPlace(command SlackCommand) SlackResponse {
 		return errorResponse(err.Error() + " Maybe try adding one using `" + command.Command + " add Awesome Place`")
 	}
 
-	message := "How about " + place.Name
+	message := ":knife_fork_plate: How about *" + place.Name + "*?"
 	attachments := []SlackAttachment{attachmentForPlace(place)}
 
 	return SlackResponse{"in_channel", message, attachments}
