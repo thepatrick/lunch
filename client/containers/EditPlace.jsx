@@ -7,7 +7,7 @@ const mapStateToProps = (state, ownProps) => {
   return {
     initialValues: place,
     isFetching: state.places.isFetching,
-    isSaving: place && place.isSaving,
+    isSaving: !!(place && place.isSaving),
   };
 };
 
