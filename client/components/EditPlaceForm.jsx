@@ -1,4 +1,5 @@
-import React, { PropTypes } from 'react';
+import React from 'react';
+import PropTypes from 'prop-types';
 import { Field, reduxForm } from 'redux-form';
 
 const EditPlaceForm = ({ isFetching, isSaving, handleSubmit }) => {
@@ -11,8 +12,8 @@ const EditPlaceForm = ({ isFetching, isSaving, handleSubmit }) => {
   return (
     <form onSubmit={handleSubmit}>
       <div className="form-group row">
-        <label htmlFor="name-input-field" className="col-2 col-form-label">Name</label>
-        <div className="col-10">
+        <label htmlFor="name-input-field" className="col-sm col-md-2 col-form-label">Name</label>
+        <div className="col-sm col-md-8">
           <Field
             className="form-control"
             name="name"
@@ -21,9 +22,7 @@ const EditPlaceForm = ({ isFetching, isSaving, handleSubmit }) => {
             id="name-input-field"
           />
         </div>
-      </div>
-      <div className="form-group row">
-        <div className="col-10 offset-2">
+        <div className="col-sm col-md-2">
           <button type="submit" className="btn btn-primary" disabled={isSaving}>Save</button>
         </div>
       </div>

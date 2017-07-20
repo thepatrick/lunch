@@ -236,6 +236,7 @@ func (places Places) VisitPlace(teamID string, id string) (Place, error) {
 	}
 
 	place.LastVisited = time.Now()
+	place.VisitCount++
 
 	err = c.Update(bson.M{"_id": bson.ObjectIdHex(id)}, &place)
 	if err != nil {
@@ -269,6 +270,7 @@ func (places Places) SkipPlace(teamID string, id string) error {
 	}
 
 	place.LastSkipped = time.Now()
+	place.SkipCount++
 
 	err = c.Update(bson.M{"_id": bson.ObjectIdHex(id)}, &place)
 	if err != nil {

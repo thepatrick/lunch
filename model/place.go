@@ -14,6 +14,8 @@ type Place struct {
 	Name        string        `json:"name"`
 	LastVisited time.Time     `json:"last_visited"`
 	LastSkipped time.Time     `json:"last_skipped"`
+	SkipCount   uint          `json:"skip_count"`
+	VisitCount  uint          `json:"visit_count"`
 }
 
 // MarshalJSON Convert place to JSON document

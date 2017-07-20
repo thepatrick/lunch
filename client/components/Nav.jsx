@@ -1,4 +1,5 @@
-import React, { PropTypes } from 'react';
+import React from 'react';
+import PropTypes from 'prop-types';
 import { Link } from 'react-router';
 
 function Nav({ name, teamName, isFetching, error }) {
@@ -49,7 +50,7 @@ Nav.propTypes = {
   name: PropTypes.string.isRequired,
   teamName: PropTypes.string.isRequired,
   isFetching: PropTypes.bool.isRequired,
-  error: PropTypes.oneOf(Error),
+  error: PropTypes.instanceOf(Error),
 };
 
 Nav.defaultProps = {

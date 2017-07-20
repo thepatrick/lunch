@@ -1,8 +1,9 @@
-import React, { PropTypes } from 'react';
+import React from 'react';
+import PropTypes from 'prop-types';
 import { Link } from 'react-router';
 import PlaceDate from './PlaceDate';
 
-const Place = ({ editUrl, name, lastVisited, lastSkipped }) => (
+const Place = ({ editUrl, name, lastVisited, lastSkipped, visitCount, skipCount }) => (
   <tr>
     <td>
       <Link to={editUrl}>
@@ -16,10 +17,16 @@ const Place = ({ editUrl, name, lastVisited, lastSkipped }) => (
       />
     </td>
     <td>
+      {visitCount}
+    </td>
+    <td>
       <PlaceDate
         date={lastSkipped}
         defaultString="Never"
       />
+    </td>
+    <td>
+      {skipCount}
     </td>
   </tr>
 );
@@ -29,6 +36,8 @@ Place.propTypes = {
   name: PropTypes.string.isRequired,
   lastVisited: PropTypes.instanceOf(Date),
   lastSkipped: PropTypes.instanceOf(Date),
+  skipCount: PropTypes.number.isRequired,
+  visitCount: PropTypes.number.isRequired,
 };
 
 Place.defaultProps = {

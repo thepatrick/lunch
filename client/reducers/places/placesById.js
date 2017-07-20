@@ -25,6 +25,8 @@ const placesById = (state = {}, action) => {
           name: current.name,
           lastSkipped: current.last_skipped && new Date(current.last_skipped),
           lastVisited: current.last_visited && new Date(current.last_visited),
+          skipCount: current.skip_count,
+          visitCount: current.visit_count,
           isSaving: false,
         };
         return Object.assign({}, previous, newItem);

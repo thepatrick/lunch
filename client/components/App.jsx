@@ -1,4 +1,5 @@
-import React, { PropTypes } from 'react';
+import React from 'react';
+import PropTypes from 'prop-types';
 import NavBar from '../containers/NavBar';
 
 const App = ({ userFetching, userError, children }) => {

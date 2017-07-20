@@ -1,4 +1,5 @@
-import React, { PropTypes } from 'react';
+import React from 'react';
+import PropTypes from 'prop-types';
 
 const Welcome = ({ teamName, isFetching, error }) => {
   if (isFetching) {
@@ -19,7 +20,7 @@ const Welcome = ({ teamName, isFetching, error }) => {
 Welcome.propTypes = {
   teamName: PropTypes.string.isRequired,
   isFetching: PropTypes.bool.isRequired,
-  error: PropTypes.oneOf(Error),
+  error: PropTypes.instanceOf(Error),
 };
 
 Welcome.defaultProps = {
