@@ -55,7 +55,7 @@ type slackActionPayload struct {
 	Actions    []SlackAttachmentAction `json:"actions"`
 	CallbackID string                  `json:"callback_id"`
 	Team       slackTeam               `json:"team"`
-	// UserID slackUser `json:"user"`
+	User       slackUser               `json:"user"`
 	// ActionTs string `json:"action_ts"`
 	// MessageTs string `json:"message_ts"`
 	// AttachmentID string `json:"attachment_id"`
@@ -73,10 +73,11 @@ type slackTeam struct {
 	Domain string `json:"domain"`
 }
 
-// type slackUser {
-// 	ID string `json:"id"`
-// 	Name string `json:"name"`
-// }
+type slackUser struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
 // type slackChannel {
 // 	ID string `json:"id"`
 // 	Name string `json:"name"`

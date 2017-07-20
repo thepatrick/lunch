@@ -77,7 +77,8 @@ func (places Places) AllPlaces(teamID string) ([]Place, error) {
 	return thePlaces, nil
 }
 
-func (places Places) findByID(teamID string, id string) (Place, error) {
+// FindByID returns a single place with team ID & place ID
+func (places Places) FindByID(teamID string, id string) (Place, error) {
 	session := places.Session.Copy()
 	defer session.Close()
 
