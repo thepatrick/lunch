@@ -32,8 +32,8 @@ const PlaceList = ({ places, isFetching }) => {
     <thead>
       <tr>
         <th>Name</th>
-        <th>Last Visited</th>
-        <th>Last Skipped</th>
+        <th colSpan="2">Last Visited</th>
+        <th colSpan="2">Last Skipped</th>
       </tr>
     </thead>
     <tbody>
