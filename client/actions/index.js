@@ -1,4 +1,5 @@
 import fetch from 'isomorphic-fetch';
+import { push } from 'react-router-redux';
 
 export const fetchUser = () => (
   {
