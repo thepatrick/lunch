@@ -134,3 +134,47 @@ export const updatePlaceName = (placeId, placeName) => (
       .catch(err => dispatch(savePlaceFailure(placeId, err)));
   }
 );
+
+const deletingPlace = id => (
+  {
+    type: 'DELETE_PLACE',
+    id,
+  }
+);
+
+const deletePlaceSuccess = id => (
+  {
+    type: 'DELETE_PLACE_SUCCESS',
+    id,
+  }
+);
+
+const deletePlaceFailure = (id, error) => (
+  {
+    type: 'DELETE_PLACE_FAILURE',
+    id,
+    error,
+  }
+);
+
+export const deletePlace = placeId => (
+  (dispatch) => {
+    dispatch(deletingPlace);
+
+    return fetch(`/manage/api/places/${placeId}`, {
+      credentials: 'include',
+      method: 'DELETE',
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(response.statusText);
+        }
+        return response;
+      })
+      .then(() => {
+        dispatch(deletePlaceSuccess(placeId));
+        dispatch(push('/manage'));
+      })
+      .catch(err => dispatch(deletePlaceFailure(placeId, err)));
+  }
+);
