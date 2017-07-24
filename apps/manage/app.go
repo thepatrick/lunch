@@ -32,6 +32,7 @@ func (app App) NewMux() *goji.Mux {
 	mux.HandleFunc(pat.Get("/redirect"), app.slackRedirect())
 	mux.HandleFunc(pat.Get("/whoami"), app.whoami())
 	mux.HandleFunc(pat.Post("/places/:id"), app.placeUpdate())
+	mux.HandleFunc(pat.Delete("/places/:id"), app.deletePlace())
 	mux.HandleFunc(pat.Get("/places"), app.placesAll())
 	mux.HandleFunc(pat.Get("/login"), app.login())
 

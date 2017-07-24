@@ -10,6 +10,10 @@ const updateIndividualPlace = (state = {}, action) => {
       });
     case 'SAVE_PLACE_FAILURE':
       return Object.assign({}, state, { isSaving: false, error: action.error });
+    case 'DELETE_PLACE':
+      return Object.assign({}, state, { isDeleting: true });
+    case 'DELETE_PLACE_FAILURE':
+      return Object.assign({}, state, { isDeleting: false, error: action.error });
     default:
       return state;
   }
@@ -33,9 +37,16 @@ const placesById = (state = {}, action) => {
       }, {});
     case 'SAVE_PLACE':
     case 'SAVE_PLACE_SUCCESS':
-    case 'SAVE_PLACE_FAILURE': {
+    case 'SAVE_PLACE_FAILURE':
+    case 'DELETE_PLACE':
+    case 'DELETE_PLACE_FAILURE': {
       const updatedPlace = {};
       updatedPlace[action.id] = updateIndividualPlace(state[action.id], action);
+      return Object.assign({}, state, updatedPlace);
+    }
+    case 'DELETE_PLACE_SUCCESS': {
+      const updatedPlace = {};
+      updatedPlace[action.id] = undefined;
       return Object.assign({}, state, updatedPlace);
     }
     default:

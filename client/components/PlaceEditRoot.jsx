@@ -3,6 +3,7 @@ import PropTypes from 'prop-types';
 import { Link } from 'react-router';
 import EditPlace from '../containers/EditPlace';
 import ViewPlace from '../containers/ViewPlace';
+import DeletePlaceContainer from '../containers/DeletePlaceContainer';
 
 function PlaceEditRoot({ params }) {
   return (
@@ -18,7 +19,10 @@ function PlaceEditRoot({ params }) {
       </nav>
 
       <main className="col-sm-9 offset-sm-3 col-md-10 offset-md-2 pt-3">
-        <h1>Place</h1>
+        <h1>
+          Place
+          <DeletePlaceContainer placeId={params.id}>Delete</DeletePlaceContainer>
+        </h1>
         <div className="table-responsive">
           <EditPlace placeId={params.id} />
           <ViewPlace placeId={params.id} />
