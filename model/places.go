@@ -105,13 +105,8 @@ func onlyProposablePlaces(vs []Place) []Place {
 	return vsf
 }
 
-func sortProposablePlaces(vs []Place) []Place {
-	// TODO: weight places so we prefer places we haven't been to / skipped recently
-	for i := range vs {
-		j := rand.Intn(i + 1)
-		vs[i], vs[j] = vs[j], vs[i]
-	}
-	return vs
+func pickProposablePlace(places []Place) Place {
+	return places[rand.Intn(len(places))]
 }
 
 // ProposePlace picks a place to go to for lunch based on a proprietary algorithm (basically randomness)
@@ -135,11 +130,9 @@ func (places Places) ProposePlace(teamID string) (Place, error) {
 		return Place{}, fmt.Errorf("There are no places that haven't been skipped or visited recently")
 	}
 
-	allPlaces = sortProposablePlaces(allPlaces)
-
 	log.Printf("We have %v places!\n", len(allPlaces))
 
-	return allPlaces[0], nil
+	return pickProposablePlace(allPlaces), nil
 }
 
 // AddPlace adds a new place
