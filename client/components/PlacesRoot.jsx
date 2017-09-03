@@ -6,17 +6,7 @@ import VisiblePlaces from '../containers/VisiblePlaces';
 function PlacesRoot() {
   return (
     <div className="row">
-      <nav className="col-sm-3 col-md-2 hidden-xs-down bg-faded sidebar">
-        <ul className="nav nav-pills flex-column">
-          <li className="nav-item">
-            <Link className="nav-link active" to="/manage">
-              Places <span className="sr-only">(current)</span>
-            </Link>
-          </li>
-        </ul>
-      </nav>
-
-      <main className="col-sm-9 offset-sm-3 col-md-10 offset-md-2 pt-3">
+      <main className="col-sm-12 col-md-12 pt-5">
 
         <UserWelcome />
         <div className="table-responsive">
