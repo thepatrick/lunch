@@ -16,7 +16,7 @@ function Nav({ name, teamName, isFetching, error }) {
     <nav className="navbar navbar-expand-lg bg-primary fixed-top">
       <div className="container">
         <div className="navbar-translate">
-          <a className="navbar-brand" href="http://demos.creative-tim.com/now-ui-kit/index.html" rel="tooltip" title="Designed by Invision. Coded by Creative Tim" data-placement="bottom" target="_blank">
+          <a className="navbar-brand" href="/" rel="tooltip" title="Lunch Bot. Lunch, by a bot." data-placement="bottom">
             Lunch Bot
           </a>
           <button className="navbar-toggler navbar-toggler" type="button" data-toggle="collapse" data-target="#navigation" aria-controls="navigation-index" aria-expanded="false" aria-label="Toggle navigation">
