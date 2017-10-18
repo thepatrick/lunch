@@ -12,10 +12,14 @@ import { fetchCurrentUser, fetchAllPlaces } from './actions';
 
 import Root from './components/Root';
 
-require('bootstrap-loader');
+import './now-ui-kit/assets/css/bootstrap.min.css';
+import './now-ui-kit/assets/css/now-ui-kit.css';
+import './dashboard.css';
+
+// require('bootstrap-loader');
 require('whatwg-fetch');
 
-require('./dashboard.css');
+// require('./dashboard.css');
 
 const loggerMiddleware = createLogger();
 

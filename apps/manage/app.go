@@ -36,6 +36,8 @@ func (app App) NewMux() *goji.Mux {
 	mux.HandleFunc(pat.Get("/places"), app.placesAll())
 	mux.HandleFunc(pat.Get("/login"), app.login())
 
+	mux.HandleFunc(pat.Get("/graphql"), app.placesGraphql())
+
 	mux.HandleFunc(pat.Delete("/places/:id"), app.deletePlace())
 
 	mux.Use(support.Logging)
