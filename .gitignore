@@ -27,4 +27,4 @@ run.sh
 lunch
 
 node_modules
-static
+static/manage
