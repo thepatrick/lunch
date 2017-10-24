@@ -3,6 +3,8 @@
 *.a
 *.so
 
+.DS_Store
+
 # Folders
 _obj
 _test
@@ -27,4 +29,5 @@ run.sh
 lunch
 
 node_modules
-static
+static/manage
+static/cached_uglify
