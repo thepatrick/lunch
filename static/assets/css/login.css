@@ -1,0 +1,15 @@
+.page-header {
+  /* For browsers that do not support gradients */
+  background: linear-gradient(0deg, rgba(44, 44, 44, 0.0), rgba(29, 29, 29, 0.0));
+  /* Standard syntax */
+}
+
+.btn.btn-primary.btn-round.btn-lg.btn-block {
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
+  background: rgba(87, 87, 87, 0.6);
+  padding-top: 40px;
+  padding-bottom: 40px;
+  font-size: 150%;
+}
+
