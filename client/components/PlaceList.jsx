@@ -8,13 +8,13 @@ const PlaceList = ({ places, isFetching }) => {
   if (isFetching) {
     body = (
       <tr>
-        <td colSpan="3">Loading...</td>
+        <td colSpan="5">Loading...</td>
       </tr>
     );
   } else if (places.length === 0) {
     body = (
       <tr>
-        <td colSpan="3">
+        <td colSpan="5">
           None yet, use <code>/lunch add My Place</code> from slack to add your first place.
         </td>
       </tr>

@@ -12,6 +12,7 @@ type SlackCommand struct {
 	Command     string `param:"command"`
 	Text        string `param:"text"`
 	ResponseURL string `param:"response_url"`
+	TriggerID   string `param:"trigger_id"`
 }
 
 // SlackResponse is a response to a slack command
