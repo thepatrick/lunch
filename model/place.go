@@ -11,6 +11,8 @@ import (
 type Place struct {
 	ID          bson.ObjectId `bson:"_id,omitempty" json:"id"`
 	TeamID      string        `json:"team_id"`
+	ChannelID		string				`json:"channel_id"`
+	ChannelName string				`json:"channel_name"`
 	Name        string        `json:"name"`
 	LastVisited time.Time     `json:"last_visited"`
 	LastSkipped time.Time     `json:"last_skipped"`

@@ -35,7 +35,7 @@ func (places Places) ensurePlacesIndex() {
 	c := session.DB(places.DatabaseName).C("places")
 
 	nameIndex := mgo.Index{
-		Key:        []string{"name", "teamid"},
+		Key:        []string{"name", "teamid", "channelid"},
 		Unique:     true,
 		DropDups:   true,
 		Background: true,
@@ -55,6 +55,18 @@ func (places Places) ensurePlacesIndex() {
 	}
 
 	err = c.EnsureIndex(teamIndex)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	channelIndex := mgo.Index{
+		Key:        []string{"teamid", "channelid"},
+		Unique:     false,
+		Background: true,
+		Sparse:     true,
+	}
+
+	err = c.EnsureIndex(channelIndex)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -78,14 +90,14 @@ func (places Places) AllPlaces(teamID string) ([]Place, error) {
 }
 
 // FindByID returns a single place with team ID & place ID
-func (places Places) FindByID(teamID string, id string) (Place, error) {
+func (places Places) FindByID(teamID string, channelID string, id string) (Place, error) {
 	session := places.Session.Copy()
 	defer session.Close()
 
 	c := session.DB(places.DatabaseName).C("places")
 
 	var place Place
-	err := c.Find(bson.M{"teamid": teamID, "_id": bson.ObjectIdHex(id)}).One(&place)
+	err := c.Find(bson.M{"teamid": teamID, "channelid": channelID, "_id": bson.ObjectIdHex(id)}).One(&place)
 	if err != nil {
 		log.Printf("Failed to find place %v error: %v\n", id, err)
 		return Place{}, fmt.Errorf("Database error")
@@ -110,17 +122,21 @@ func pickProposablePlace(places []Place) Place {
 }
 
 // ProposePlace picks a place to go to for lunch based on a proprietary algorithm (basically randomness)
-func (places Places) ProposePlace(teamID string) (Place, error) {
+func (places Places) ProposePlace(teamID string, channelID string) (Place, error) {
 	session := places.Session.Copy()
 	defer session.Close()
 
 	c := session.DB(places.DatabaseName).C("places")
 
 	var allPlaces []Place
-	err := c.Find(bson.M{"teamid": teamID}).All(&allPlaces)
+	err := c.Find(bson.M{"teamid": teamID, "channelid": channelID}).All(&allPlaces)
 	if err != nil {
 		log.Println("Failed to get all places: ", err)
 		return Place{}, fmt.Errorf("Database error")
+	}
+
+	if len(allPlaces) == 0 {
+		return Place{}, fmt.Errorf("This channel hasn't added any places yet, try adding one: /lunch add Monk's Cafe")
 	}
 
 	allPlaces = onlyProposablePlaces(allPlaces)
@@ -142,7 +158,7 @@ func (places Places) AddPlace(place Place) (string, error) {
 
 	c := session.DB(places.DatabaseName).C("places")
 
-	log.Printf("Adding %v in %v", place.Name, place.TeamID)
+	log.Printf("Adding %v in %v/%v", place.Name, place.TeamID, place.ChannelID)
 
 	err := c.Insert(place)
 	if err != nil {
@@ -216,14 +232,14 @@ func (places Places) UpdatePlace(teamID string, id string, updates interface{}) 
 }
 
 // VisitPlace updates the database to record that user has accepted our lunch suggestion.
-func (places Places) VisitPlace(teamID string, id string) (Place, error) {
+func (places Places) VisitPlace(teamID string, channelID string, id string) (Place, error) {
 	session := places.Session.Copy()
 	defer session.Close()
 
 	c := session.DB(places.DatabaseName).C("places")
 
 	var place Place
-	err := c.Find(bson.M{"teamid": teamID, "_id": bson.ObjectIdHex(id)}).One(&place)
+	err := c.Find(bson.M{"teamid": teamID, "channelid": channelID, "_id": bson.ObjectIdHex(id)}).One(&place)
 	if err != nil {
 		log.Printf("Failed to find place %v error: %v\n", id, err)
 		return Place{}, fmt.Errorf("Database error")
@@ -250,14 +266,14 @@ func (places Places) VisitPlace(teamID string, id string) (Place, error) {
 }
 
 // SkipPlace records that the a user has decided the algorithm is wrong and that this is not the place to go to today.
-func (places Places) SkipPlace(teamID string, id string) error {
+func (places Places) SkipPlace(teamID string, channelID string, id string) error {
 	session := places.Session.Copy()
 	defer session.Close()
 
 	c := session.DB(places.DatabaseName).C("places")
 
 	var place Place
-	err := c.Find(bson.M{"teamid": teamID, "_id": bson.ObjectIdHex(id)}).One(&place)
+	err := c.Find(bson.M{"teamid": teamID, "channelid": channelID, "_id": bson.ObjectIdHex(id)}).One(&place)
 	if err != nil {
 		log.Printf("Failed to find place %v error: %v\n", id, err)
 		return fmt.Errorf("Database error")

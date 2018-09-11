@@ -26,6 +26,12 @@ var placeType = graphql.NewObject(
 			"team_id": &graphql.Field{
 				Type: graphql.String,
 			},
+			"channel_id": &graphql.Field{
+				Type: graphql.String,
+			},
+			"channel_name": &graphql.Field{
+				Type: graphql.String,
+			},
 			"name": &graphql.Field{
 				Type: graphql.String,
 			},
@@ -77,6 +83,9 @@ var queryType = graphql.NewObject(
 			"place": &graphql.Field{
 				Type: placeType,
 				Args: graphql.FieldConfigArgument{
+					"channel_id": &graphql.ArgumentConfig{
+						Type: graphql.String,
+					},
 					"id": &graphql.ArgumentConfig{
 						Type: graphql.String,
 					},
@@ -86,7 +95,7 @@ var queryType = graphql.NewObject(
 					app := p.Context.Value("app").(App)
 					session := p.Context.Value("session").(validSession)
 
-					return app.places.FindByID(session.user.Team.ID, p.Args["id"].(string))
+					return app.places.FindByID(session.user.Team.ID, p.Args["channel_id"].(string), p.Args["id"].(string))
 				},
 			},
 		},

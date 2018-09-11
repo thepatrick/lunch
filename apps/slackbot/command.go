@@ -54,7 +54,7 @@ func (app App) command() http.HandlerFunc {
 }
 
 func (app App) suggestPlace(command SlackCommand) SlackResponse {
-	place, err := app.places.ProposePlace(command.TeamID)
+	place, err := app.places.ProposePlace(command.TeamID, command.ChannelID)
 	if err != nil {
 		return errorResponse(err.Error() + " Maybe try adding one using `" + command.Command + " add Awesome Place`")
 	}
@@ -80,6 +80,8 @@ func (app App) addPlace(command SlackCommand, words []string) SlackResponse {
 	var place model.Place
 	place.Name = placeName
 	place.TeamID = command.TeamID
+	place.ChannelID = command.ChannelID
+	place.ChannelName = command.ChannelName
 
 	_, err := app.places.AddPlace(place)
 

@@ -38,9 +38,9 @@ func (app App) action() http.HandlerFunc {
 		var response SlackResponse
 
 		if action == "skip" {
-			response = app.skipPlace(payload.User.Name, payload.Team.ID, payload.CallbackID)
+			response = app.skipPlace(payload.User.Name, payload.Team.ID, payload.Channel.ID, payload.CallbackID)
 		} else if action == "ok" {
-			response = app.okPlace(payload.User.Name, payload.Team.ID, payload.CallbackID)
+			response = app.okPlace(payload.User.Name, payload.Team.ID, payload.Channel.ID, payload.CallbackID)
 		} else if action == "cancel" {
 			response = app.cancelPlace(payload.User.Name)
 		} else {
@@ -63,19 +63,18 @@ func (app App) cancelPlace(userName string) SlackResponse {
 	return SlackResponse{"in_channel", message, attachments}
 }
 
-func (app App) skipPlace(userName string, teamID string, placeID string) SlackResponse {
-	err := app.places.SkipPlace(teamID, placeID)
+func (app App) skipPlace(userName string, teamID string, channelID string, placeID string) SlackResponse {
+	err := app.places.SkipPlace(teamID, channelID, placeID)
 
 	if err != nil {
 		return errorResponse(err.Error())
 	}
 
-	previousPlace, err := app.places.FindByID(teamID, placeID)
+	previousPlace, err := app.places.FindByID(teamID, channelID, placeID)
 	if err != nil {
 		return errorResponse(err.Error())
 	}
 
-	place, err := app.places.ProposePlace(teamID)
 	if err != nil {
 		return errorResponse(err.Error())
 	}
@@ -86,8 +85,8 @@ func (app App) skipPlace(userName string, teamID string, placeID string) SlackRe
 	return SlackResponse{"in_channel", message, attachments}
 }
 
-func (app App) okPlace(userName string, teamID string, placeID string) SlackResponse {
-	place, err := app.places.VisitPlace(teamID, placeID)
+func (app App) okPlace(userName string, teamID string, channelID string, placeID string) SlackResponse {
+	place, err := app.places.VisitPlace(teamID, channelID, placeID)
 
 	if err != nil {
 		return errorResponse(err.Error())
