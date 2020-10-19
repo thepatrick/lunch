@@ -62,7 +62,7 @@
     "style-loader": "^0.13.1",
     "url-loader": "^0.5.7",
     "webpack": "^2.2.0-rc.7",
-    "webpack-subresource-integrity": "^0.8.2",
+    "webpack-subresource-integrity": "^1.5.1",
     "webpack-uglify-js-plugin": "^1.1.9",
     "whatwg-fetch": "^2.0.1"
   }
